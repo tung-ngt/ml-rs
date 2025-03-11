@@ -23,7 +23,7 @@ pub struct Linear {
 impl Linear {
     pub fn new(in_features: usize, out_features: usize) -> Self {
         Self {
-            input: Matrix::new(in_features, 1),
+            input: Matrix::new(1, in_features),
             weights: Matrix::filled(out_features, in_features, 1.0),
             biases: Matrix::filled(out_features, 1, 1.0),
         }
@@ -33,18 +33,19 @@ impl Linear {
 impl Forward for Linear {
     fn forward(&mut self, input: &Matrix) -> Matrix {
         let (out_features, in_features) = self.weights.shape();
-        let (input_features, no_inputs) = input.shape();
+        let (no_inputs, input_features) = input.shape();
 
         assert!(
             in_features == input_features,
-            "Linear cannot dot weight {}x{} with input {}x{}",
-            out_features,
-            in_features,
+            "Linear cannot dot input {}x{} with weight T {}x{}",
             input_features,
-            no_inputs
+            no_inputs,
+            in_features,
+            out_features,
         );
+
         self.input = input.clone();
-        &(&self.weights * input) + &self.biases
+        &(input * &self.weights.t()) + &self.biases.t()
     }
 }
 
@@ -53,8 +54,8 @@ impl Backward for Linear {
         let (_, in_features) = self.weights.shape();
         Linear {
             input: Matrix::new(in_features, 1),
-            weights: next_grad * &self.input.t(),
-            biases: next_grad.clone(),
+            weights: &next_grad.t() * &self.input,
+            biases: next_grad.t(),
         }
     }
 }
@@ -96,6 +97,12 @@ pub trait Loss {
 
 impl Loss for MSE {
     fn loss(&mut self, prediction: Matrix, target: Matrix) -> f32 {
+        assert!(
+            prediction.shape() == target.shape(),
+            "MSE prediction {:?} and target {:?} have different shape",
+            prediction.shape(),
+            target.shape()
+        );
         (&(&prediction - &target) ^ 2)[(0, 0)]
     }
 
@@ -105,3 +112,32 @@ impl Loss for MSE {
 }
 
 impl Layer for Linear {}
+
+//pub struct Sigmoid {
+//    input_sig: Matrix,
+//}
+//
+//impl Sigmoid {
+//    fn sigmoid(x: f32) -> f32 {
+//        1.0 / (1.0 + (-x).exp())
+//    }
+//}
+//
+//impl Forward for Sigmoid {
+//    fn forward(&mut self, input: &Matrix) -> Matrix {
+//        self.input_sig = input.apply(Self::sigmoid);
+//        self.input_sig.clone()
+//    }
+//}
+//
+//impl Backward for Sigmoid {
+//    fn backward(&self, next_grad: &Matrix) -> Self {
+//        next_grad.t()
+//    }
+//}
+//
+//impl Update for Sigmoid {
+//    fn update(self, optimizer: &mut impl Optimizer, grad: Self) -> Self {}
+//}
+//
+//impl Layer for Sigmoid {}
