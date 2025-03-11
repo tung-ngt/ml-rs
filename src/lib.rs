@@ -1,2 +1,2 @@
-pub mod linear;
+pub mod matrix;
 pub mod nn;

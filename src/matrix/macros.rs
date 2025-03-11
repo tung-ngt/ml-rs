@@ -17,7 +17,7 @@ macro_rules! matrix {
             )+
         )+
 
-        $crate::linear::matrix::Matrix::with_data(ROWS, COLS, COLS, 0, std::sync::Arc::from(data))
+        $crate::matrix::Matrix::with_data(ROWS, COLS, COLS, 0, std::sync::Arc::from(data))
     }};
     (@count_rows; $($($elements:expr),+);+ ) => (0usize $(+ { $(let _ = $elements;)+; 1})+);
     (@count_cols; $($first_row_elems:expr),+) => (0usize $(+ {let _ = $first_row_elems; 1})+);

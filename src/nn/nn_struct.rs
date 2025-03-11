@@ -1,4 +1,4 @@
-use crate::linear::Matrix;
+use crate::matrix::Matrix;
 
 pub trait Forward {
     fn forward(&mut self, input: &Matrix) -> Matrix;
