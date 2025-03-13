@@ -12,11 +12,11 @@ fn main() {
         -1, -1
     ];
     let labels = matrix![
-        9, 1;
-        2, 6;
-        1, 3;
-        2, 3;
-        -1, -1
+        10;
+        8;
+        4;
+        5;
+        -2
     ];
 
     //let labels = matrix![
@@ -29,7 +29,7 @@ fn main() {
 
     let (no_data, _) = labels.shape();
 
-    let mut lin = Linear::new(2, 2);
+    let mut lin = Linear::new(2, 1);
     let mut optimizer = SGD::new(0.001);
     let mut loss_function = MSE {};
 
@@ -42,7 +42,7 @@ fn main() {
             let loss = loss_function.loss(output.clone(), label.clone());
             let loss_grad = loss_function.loss_grad(output, label);
             let grad = lin.backward(&loss_grad);
-            //println!("({}) loss = {:.10}", i, loss);
+            println!("({}) loss = {:.10}", i, loss);
             //println!("({}) grad_weights = {:.10}", i, grad.weights);
             //println!("({}) grad_biases = {:.10}", i, grad.biases);
             //println!("({}) weights = {:.10}", i, lin.weights);
