@@ -1,3 +1,4 @@
+pub mod squeeze;
 pub mod submatrix;
 pub mod subtensor;
 pub mod subvector;
