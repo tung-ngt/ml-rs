@@ -5,6 +5,14 @@ pub struct Sigmoid<const INPUT_DIMENSIONS: usize> {
     input_sig: Tensor<INPUT_DIMENSIONS>,
 }
 
+impl<const INPUT_DIMENSIONS: usize> Default for Sigmoid<INPUT_DIMENSIONS> {
+    fn default() -> Self {
+        Self {
+            input_sig: Tensor::new(&[1; INPUT_DIMENSIONS]),
+        }
+    }
+}
+
 impl<const INPUT_DIMENSIONS: usize> Sigmoid<INPUT_DIMENSIONS> {
     fn sigmoid(x: f32) -> f32 {
         1.0 / (1.0 + (-x).exp())
@@ -20,13 +28,17 @@ impl<const INPUT_DIMENSIONS: usize> Forward<INPUT_DIMENSIONS, INPUT_DIMENSIONS>
     }
 }
 
-impl<const NEXTGRAD_DIMENSIONS: usize> Backward<NEXTGRAD_DIMENSIONS>
-    for Sigmoid<NEXTGRAD_DIMENSIONS>
+impl<const INPUT_DIMENSIONS: usize> Backward<INPUT_DIMENSIONS, INPUT_DIMENSIONS>
+    for Sigmoid<INPUT_DIMENSIONS>
 {
-    fn backward(&self, next_grad: &Tensor<NEXTGRAD_DIMENSIONS>) -> Self {
+    fn backward(&self, next_grad: &Tensor<INPUT_DIMENSIONS>) -> Self {
         Self {
-            input_sig: next_grad.clone(),
+            input_sig: self.input_sig.mul_elem(&self.input_sig).mul_elem(next_grad),
         }
+    }
+
+    fn input_grad(&self) -> Tensor<INPUT_DIMENSIONS> {
+        self.input_sig.clone()
     }
 }
 

@@ -37,13 +37,17 @@ impl Forward<2, 2> for Linear {
     }
 }
 
-impl Backward<2> for Linear {
+impl Backward<2, 2> for Linear {
     fn backward(&self, next_grad: &Tensor<2>) -> Self {
         Linear {
             input: next_grad * &self.weights,
             weights: &next_grad.t() * &self.input,
             biases: next_grad.sum_row(),
         }
+    }
+
+    fn input_grad(&self) -> Tensor<2> {
+        self.input.clone()
     }
 }
 
