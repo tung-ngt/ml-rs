@@ -32,17 +32,17 @@ impl Forward<2, 2> for Linear {
         );
 
         self.input = input.clone();
-        &(input * &self.weights.t()) + &self.biases
+
+        (input * &self.weights.t()).row_add(&self.biases)
     }
 }
 
-impl Backward<1> for Linear {
-    fn backward(&self, next_grad: &Tensor<1>) -> Self {
-        let &[_, in_features] = self.weights.shape();
+impl Backward<2> for Linear {
+    fn backward(&self, next_grad: &Tensor<2>) -> Self {
         Linear {
-            input: Tensor::new(&[in_features, 1]),
-            weights: &next_grad * &self.input,
-            biases: next_grad.clone(),
+            input: next_grad * &self.weights,
+            weights: &next_grad.t() * &self.input,
+            biases: next_grad.sum_row(),
         }
     }
 }
@@ -55,4 +55,4 @@ impl Update for Linear {
     }
 }
 
-impl Layer<2, 2, 1> for Linear {}
+impl Layer<2, 2, 2> for Linear {}

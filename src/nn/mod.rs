@@ -1,5 +1,6 @@
 pub mod layers;
-pub mod nn_struct;
+pub mod loss;
+pub mod optimizer;
 
 use crate::tensor::Tensor;
 
@@ -32,11 +33,11 @@ pub trait Optimizer {
 }
 
 pub trait Loss {
-    fn loss<const OUTPUT_DIMENSIONS: usize>(
-        &mut self,
-        prediction: Tensor<OUTPUT_DIMENSIONS>,
-        target: Tensor<OUTPUT_DIMENSIONS>,
-    ) -> f32;
+    //fn loss<const OUTPUT_DIMENSIONS: usize>(
+    //    &mut self,
+    //    prediction: Tensor<OUTPUT_DIMENSIONS>,
+    //    target: Tensor<OUTPUT_DIMENSIONS>,
+    //) -> f32;
     fn loss_grad<const OUTPUT_DIMENSIONS: usize>(
         &mut self,
         prediction: Tensor<OUTPUT_DIMENSIONS>,

@@ -16,6 +16,25 @@ impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
         }
         strides
     }
+
+    pub fn flat_to_nd_index(
+        flat_index: usize,
+        strides: &[usize; NO_DIMENSIONS],
+    ) -> [usize; NO_DIMENSIONS] {
+        let mut nd_index = [0; NO_DIMENSIONS];
+        let mut remaining = flat_index;
+        for (d, dim) in strides.iter().enumerate() {
+            nd_index[d] = remaining / dim;
+            remaining %= dim;
+        }
+        assert!(
+            remaining == 0,
+            "Failed mapping flat_index {} to multidimentional index with strides: {:?}",
+            flat_index,
+            strides
+        );
+        nd_index
+    }
 }
 
 impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
@@ -168,6 +187,10 @@ impl Tensor<2> {
 }
 
 impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
+    pub fn no_elements(&self) -> usize {
+        self.shape.iter().product()
+    }
+
     pub fn shape(&self) -> &[usize; NO_DIMENSIONS] {
         &self.shape
     }

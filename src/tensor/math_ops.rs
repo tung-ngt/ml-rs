@@ -413,10 +413,98 @@ impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
 
         Self::with_data(&new_shape, &new_strides, 0, Arc::from(new_data))
     }
+
+    pub fn sum(&self) -> f32 {
+        let mut s = 0f32;
+        let mut multi_dim_index: [usize; NO_DIMENSIONS];
+        let strides = self.strides();
+        for flat_index in 0..self.no_elements() {
+            multi_dim_index = Self::flat_to_nd_index(flat_index, strides);
+            s += self[&multi_dim_index]
+        }
+        s
+    }
 }
 
 impl Tensor<2> {
-    pub fn dot(&self, b_matrix: &Tensor<2>) -> Tensor<2> {
+    pub fn row_add(&self, vector: &Tensor<1>) -> Tensor<2> {
+        let matrix = self;
+        let &[rows, cols] = matrix.shape();
+        let &[vector_size] = vector.shape();
+
+        assert!(
+            cols == vector_size,
+            "Cannot add row matrix {}x{} with vector ({},)",
+            rows,
+            cols,
+            vector_size
+        );
+
+        let stride = cols;
+        let mut new_data = vec![0f32; rows * cols];
+
+        for i in 0..rows {
+            for j in 0..cols {
+                new_data[i * stride + j] = matrix[(i, j)] + vector[j];
+            }
+        }
+
+        Tensor::matrix_with_data(rows, cols, &[stride, 1], 0, Arc::from(new_data))
+    }
+
+    pub fn col_add(&self, vector: &Tensor<1>) -> Tensor<2> {
+        let matrix = self;
+        let &[rows, cols] = matrix.shape();
+        let &[vector_size] = vector.shape();
+
+        assert!(
+            rows == vector_size,
+            "Cannot add row matrix {}x{} with vector ({},)",
+            rows,
+            cols,
+            vector_size
+        );
+
+        let stride = cols;
+        let mut new_data = vec![0f32; rows * cols];
+
+        for j in 0..cols {
+            for i in 0..rows {
+                new_data[i * stride + j] = matrix[(i, j)] + vector[i];
+            }
+        }
+
+        Tensor::matrix_with_data(rows, cols, &[stride, 1], 0, Arc::from(new_data))
+    }
+}
+
+impl Tensor<1> {
+    pub fn dot(&self, b_vector: &Tensor<1>) -> Tensor<1> {
+        let a_vector = self;
+        let &[a_size] = self.shape();
+        let &[b_size] = b_vector.shape();
+
+        assert!(
+            a_size == b_size,
+            "Cannot dot vector ({},) with vector ({},)",
+            a_size,
+            b_size
+        );
+
+        let a_data = a_vector.data();
+        let b_data = b_vector.data();
+
+        let dot_value = a_data
+            .iter()
+            .zip(b_data.iter())
+            .fold(0f32, |acc, (a, b)| acc + (a * b));
+
+        Tensor::vector_filled(1, dot_value)
+    }
+}
+
+impl Tensor<2> {
+    pub fn matmul(&self, b_matrix: &Tensor<2>) -> Tensor<2> {
         let a_matrix = self;
         let &[a_rows, a_cols] = a_matrix.shape();
         let &[b_rows, b_cols] = b_matrix.shape();
@@ -456,12 +544,45 @@ impl Tensor<2> {
         }
         Tensor::<2>::matrix_with_data(cols, rows, &[stride, 1], 0, Arc::from(new_data))
     }
+
+    pub fn sum_row(&self) -> Tensor<1> {
+        let &[rows, cols] = self.shape();
+
+        let mut new_data = vec![0f32; cols];
+        for i in 0..rows {
+            for j in 0..cols {
+                new_data[j] += self[(i, j)];
+            }
+        }
+
+        Tensor::vector_with_data(cols, 1, 0, Arc::from(new_data))
+    }
+
+    pub fn sum_col(&self) -> Tensor<1> {
+        let &[rows, cols] = self.shape();
+
+        let mut new_data = vec![0f32; cols];
+        for i in 0..rows {
+            for j in 0..cols {
+                new_data[i] += self[(i, j)];
+            }
+        }
+
+        Tensor::vector_with_data(rows, 1, 0, Arc::from(new_data))
+    }
 }
 
 impl ops::Mul for &Tensor<2> {
     type Output = Tensor<2>;
     fn mul(self, b_tensor: Self) -> Self::Output {
-        Tensor::<2>::dot(self, b_tensor)
+        Tensor::<2>::matmul(self, b_tensor)
+    }
+}
+
+impl ops::Mul for &Tensor<1> {
+    type Output = Tensor<1>;
+    fn mul(self, b_vector: Self) -> Self::Output {
+        Tensor::<1>::dot(self, b_vector)
     }
 }
 
