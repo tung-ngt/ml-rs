@@ -18,6 +18,14 @@ impl<const INPUT_DIMENSIONS: usize> ReLU<INPUT_DIMENSIONS> {
     fn relu(x: f32) -> f32 {
         0f32.max(x)
     }
+
+    fn derivative(x: f32) -> f32 {
+        if x > 0.0 {
+            1.0
+        } else {
+            0.0
+        }
+    }
 }
 
 impl<const INPUT_DIMENSIONS: usize> Forward<INPUT_DIMENSIONS, INPUT_DIMENSIONS>
@@ -34,7 +42,7 @@ impl<const INPUT_DIMENSIONS: usize> Backward<INPUT_DIMENSIONS, INPUT_DIMENSIONS>
 {
     fn backward(&self, next_grad: &Tensor<INPUT_DIMENSIONS>) -> Self {
         Self {
-            input_relu: self.input_relu.mul_elem(next_grad),
+            input_relu: self.input_relu.apply(Self::derivative).mul_elem(next_grad),
         }
     }
 
