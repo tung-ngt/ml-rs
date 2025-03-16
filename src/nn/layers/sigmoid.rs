@@ -33,7 +33,10 @@ impl<const INPUT_DIMENSIONS: usize> Backward<INPUT_DIMENSIONS, INPUT_DIMENSIONS>
 {
     fn backward(&self, next_grad: &Tensor<INPUT_DIMENSIONS>) -> Self {
         Self {
-            input_sig: self.input_sig.mul_elem(&self.input_sig).mul_elem(next_grad),
+            input_sig: self
+                .input_sig
+                .mul_elem(&(1.0 - &self.input_sig))
+                .mul_elem(next_grad),
         }
     }
 
