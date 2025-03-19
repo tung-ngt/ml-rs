@@ -1,1 +1,1 @@
-pub mod simple_linear;
+pub mod logic_gate;
