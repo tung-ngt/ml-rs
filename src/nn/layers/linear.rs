@@ -16,19 +16,14 @@ impl Linear {
         }
     }
 
-    pub fn random_init<G>(
-        in_features: usize,
-        out_features: usize,
-        weight_generator: &mut G,
-        bias_generator: &mut G,
-    ) -> Self
+    pub fn random_init<G>(in_features: usize, out_features: usize, random_generator: &mut G) -> Self
     where
         G: FnMut() -> f32,
     {
         Self {
             input: Tensor::new(&[1, in_features]),
-            weights: Tensor::matrix_random(out_features, in_features, weight_generator),
-            biases: Tensor::vector_random(out_features, bias_generator),
+            weights: Tensor::matrix_random(out_features, in_features, random_generator),
+            biases: Tensor::vector_random(out_features, random_generator),
         }
     }
 }

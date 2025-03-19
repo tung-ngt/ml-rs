@@ -31,6 +31,32 @@ impl SigmoidModel {
             two_layers,
         }
     }
+
+    pub fn random<G>(
+        in_features: usize,
+        out_features: usize,
+        two_layers: bool,
+        random_generator: &mut G,
+    ) -> Self
+    where
+        G: FnMut() -> f32,
+    {
+        Self {
+            lin1: Linear::random_init(
+                in_features,
+                if two_layers {
+                    in_features
+                } else {
+                    out_features
+                },
+                random_generator,
+            ),
+            sigmoid1: Sigmoid::default(),
+            lin2: Linear::random_init(in_features, out_features, random_generator),
+            sigmoid2: Sigmoid::default(),
+            two_layers,
+        }
+    }
 }
 
 impl Forward<2, 2> for SigmoidModel {
