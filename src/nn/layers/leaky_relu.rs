@@ -45,8 +45,8 @@ impl<const INPUT_DIMENSIONS: usize> Forward<INPUT_DIMENSIONS, INPUT_DIMENSIONS>
     for LeakyReLU<INPUT_DIMENSIONS>
 {
     fn forward(&mut self, input: &Tensor<INPUT_DIMENSIONS>) -> Tensor<INPUT_DIMENSIONS> {
-        self.input_leaky_relu = input.apply(|x| self.leaky_relu(x));
-        self.input_leaky_relu.clone()
+        self.input_leaky_relu = input.clone();
+        input.apply(|x| self.leaky_relu(x))
     }
 }
 

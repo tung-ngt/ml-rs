@@ -32,8 +32,8 @@ impl<const INPUT_DIMENSIONS: usize> Forward<INPUT_DIMENSIONS, INPUT_DIMENSIONS>
     for ReLU<INPUT_DIMENSIONS>
 {
     fn forward(&mut self, input: &Tensor<INPUT_DIMENSIONS>) -> Tensor<INPUT_DIMENSIONS> {
-        self.input_relu = input.apply(Self::relu);
-        self.input_relu.clone()
+        self.input_relu = input.clone();
+        input.apply(Self::relu)
     }
 }
 
