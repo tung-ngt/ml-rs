@@ -4,13 +4,13 @@ use ml_rs::{
 };
 
 fn main() {
-    let mut random_generator = PCG::new(42, 1);
-    let mut random_fn = || random_generator.next_normal(0.0, 0.5);
-    logic_gate::train_sigmoid(
+    let mut random_generator = PCG::new(42, 6);
+    let mut random_fn = || random_generator.next_normal(0.0, 0.05);
+    logic_gate::train_relu(
         logic_gate::xor_dataset(),
         true,
         10 * 1000,
-        1.0,
+        0.01,
         Some(&mut random_fn),
     );
 }

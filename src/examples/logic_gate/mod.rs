@@ -170,10 +170,34 @@ pub fn train_sigmoid<G>(
     }
 }
 
-pub fn train_relu(dataset: (Tensor<2>, Tensor<2>), two_layers: bool, epochs: usize, lr: f32) {
+pub fn train_relu<G>(
+    dataset: (Tensor<2>, Tensor<2>),
+    two_layers: bool,
+    epochs: usize,
+    lr: f32,
+    random_generator: Option<&mut G>,
+) where
+    G: FnMut() -> f32,
+{
     let (datas, labels) = dataset;
 
-    let mut model = ReLUModel::new(2, 1, two_layers);
+    let mut model = if let Some(random_generator) = random_generator {
+        ReLUModel::random(2, 1, two_layers, random_generator)
+    } else {
+        ReLUModel::new(2, 1, two_layers)
+    };
+
+    let test = datas.clone();
+    let output = model.forward(&test);
+    println!("output = {:.4}", output);
+    println!("start lin1_weights = {:.10}", model.lin1.weights);
+    println!("start lin1_biases = {:.10}", model.lin1.biases);
+
+    if two_layers {
+        println!("start lin2_weights = {:.10}", model.lin2.weights);
+        println!("start lin2_biases = {:.10}", model.lin2.biases);
+    }
+    println!("---------------------------------------------------------------");
 
     let mut optimizer = SGD::new(lr);
     let mut loss_function = MSE::<reduction::Mean>::default();
@@ -190,8 +214,16 @@ pub fn train_relu(dataset: (Tensor<2>, Tensor<2>), two_layers: bool, epochs: usi
         //println!("({}) biases = {:.10}", i, lin.biases);
         model = model.update(&mut optimizer, model_grad);
     }
-    //let test = tensor!(1, 2 => [2.0, -5.0]);
     let test = datas.clone();
     let output = model.forward(&test);
+
+    println!("---------------------------------------------------------------");
     println!("output = {:.4}", output);
+    println!("end lin1_weights = {:.10}", model.lin1.weights);
+    println!("end lin1_biases = {:.10}", model.lin1.biases);
+
+    if two_layers {
+        println!("end lin2_weights = {:.10}", model.lin2.weights);
+        println!("end lin2_biases = {:.10}", model.lin2.biases);
+    }
 }

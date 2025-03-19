@@ -7,11 +7,11 @@ use crate::{
 };
 
 pub struct ReLUModel {
-    lin1: Linear,
-    relu1: ReLU<2>,
-    lin2: Linear,
-    relu2: ReLU<2>,
-    two_layers: bool,
+    pub lin1: Linear,
+    pub relu1: ReLU<2>,
+    pub lin2: Linear,
+    pub relu2: ReLU<2>,
+    pub two_layers: bool,
 }
 
 impl ReLUModel {
@@ -27,6 +27,32 @@ impl ReLUModel {
             ),
             relu1: ReLU::default(),
             lin2: Linear::new(in_features, out_features),
+            relu2: ReLU::default(),
+            two_layers,
+        }
+    }
+
+    pub fn random<G>(
+        in_features: usize,
+        out_features: usize,
+        two_layers: bool,
+        random_generator: &mut G,
+    ) -> Self
+    where
+        G: FnMut() -> f32,
+    {
+        Self {
+            lin1: Linear::random_init(
+                in_features,
+                if two_layers {
+                    in_features
+                } else {
+                    out_features
+                },
+                random_generator,
+            ),
+            relu1: ReLU::default(),
+            lin2: Linear::random_init(in_features, out_features, random_generator),
             relu2: ReLU::default(),
             two_layers,
         }
