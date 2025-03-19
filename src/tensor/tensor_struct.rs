@@ -1,3 +1,4 @@
+use core::f32;
 use std::{ops, sync::Arc};
 
 #[derive(Debug, Clone)]
@@ -85,6 +86,30 @@ impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
             shape: *shape,
         }
     }
+
+    pub fn random<G>(shape: &[usize; NO_DIMENSIONS], random_generator: &mut G) -> Self
+    where
+        G: FnMut() -> f32,
+    {
+        let mut size = shape[0];
+        for (i, s) in shape.iter().skip(1).enumerate() {
+            assert!(*s > 0, "All dimension must > 0. Dimension {} == {}", i, s);
+            size *= s;
+        }
+        assert!(size > 0, "Number of dimensions must be greater than 0");
+
+        let mut data = Vec::with_capacity(size);
+
+        for _ in 0..size {
+            data.push(random_generator());
+        }
+        Self {
+            data: Arc::from(data),
+            offset: 0,
+            strides: Self::get_strides(shape),
+            shape: *shape,
+        }
+    }
 }
 
 impl Tensor<1> {
@@ -113,6 +138,23 @@ impl Tensor<1> {
     pub fn vector_filled(size: usize, value: f32) -> Self {
         assert!(size > 0, "Size must be greater than 0");
         let data = vec![value; size];
+        Self {
+            data: Arc::from(data),
+            offset: 0,
+            strides: [1],
+            shape: [size],
+        }
+    }
+
+    pub fn vector_random<G>(size: usize, random_generator: &mut G) -> Self
+    where
+        G: FnMut() -> f32,
+    {
+        assert!(size > 0, "Size must be greater than 0");
+        let mut data = Vec::with_capacity(size);
+        for _ in 0..size {
+            data.push(random_generator());
+        }
         Self {
             data: Arc::from(data),
             offset: 0,
@@ -176,6 +218,27 @@ impl Tensor<2> {
         assert!(cols > 0, "Cols must be greater than 0");
 
         let data = vec![value; rows * cols];
+        let shape = [rows, cols];
+        Self {
+            data: Arc::from(data),
+            offset: 0,
+            strides: Self::get_strides(&shape),
+            shape,
+        }
+    }
+
+    pub fn matrix_random<G>(rows: usize, cols: usize, random_generator: &mut G) -> Self
+    where
+        G: FnMut() -> f32,
+    {
+        assert!(rows > 0, "Rows must be greater than 0");
+        assert!(cols > 0, "Cols must be greater than 0");
+
+        let size = rows * cols;
+        let mut data = Vec::with_capacity(size);
+        for _ in 0..size {
+            data.push(random_generator());
+        }
         let shape = [rows, cols];
         Self {
             data: Arc::from(data),
