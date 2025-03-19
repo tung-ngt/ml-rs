@@ -25,8 +25,8 @@ impl Forward<2, 2> for Linear {
         assert!(
             in_features == input_features,
             "Linear cannot dot input {}x{} with weight T {}x{}",
-            input_features,
             no_inputs,
+            input_features,
             in_features,
             out_features,
         );
