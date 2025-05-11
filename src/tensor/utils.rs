@@ -1,5 +1,5 @@
 use super::Tensor;
-use std::fmt;
+use std::{fmt, usize};
 
 fn print_matrix(matrix: &Tensor<2>, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     let precision = f.precision().unwrap_or(2);
@@ -44,6 +44,33 @@ fn print_vector(vector: &Tensor<1>, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     Ok(())
 }
 
+fn print_tensor3(matrix: &Tensor<3>, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    let precision = f.precision().unwrap_or(2);
+    let padding = f.width().unwrap_or(0);
+    let padding = " ".repeat(padding);
+    let &[rows, cols, channels] = matrix.shape();
+
+    writeln!(f, "[")?;
+    for i in 0..rows {
+        write!(f, "{padding}  ")?;
+        for j in 0..cols {
+            write!(f, "[")?;
+            for k in 0..channels {
+                write!(
+                    f,
+                    "{cell:.precision$} ",
+                    cell = matrix[(i, j, k)],
+                    precision = precision
+                )?;
+            }
+            write!(f, "]")?;
+        }
+        writeln!(f)?;
+    }
+    write!(f, "{padding}] ({}x{}x{})", rows, cols, channels)?;
+    Ok(())
+}
+
 impl fmt::Display for Tensor<2> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         print_matrix(self, f)
@@ -53,6 +80,12 @@ impl fmt::Display for Tensor<2> {
 impl fmt::Display for Tensor<1> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         print_vector(self, f)
+    }
+}
+
+impl fmt::Display for Tensor<3> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        print_tensor3(self, f)
     }
 }
 

@@ -1,3 +1,4 @@
+pub mod conv;
 pub mod macros;
 pub mod math_ops;
 pub mod subtensor;

@@ -173,7 +173,7 @@ impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
                 a_shape
             );
 
-            if a_tensor[&multi_dim_index] != b_tensor[&multi_dim_index] {
+            if (a_tensor[&multi_dim_index] - b_tensor[&multi_dim_index]).abs() >= 1e-6 {
                 return false;
             }
         }
