@@ -1,6 +1,8 @@
 pub mod conv;
 pub mod macros;
 pub mod math_ops;
+pub mod reverse;
+pub mod stack;
 pub mod subtensor;
 pub mod utils;
 
