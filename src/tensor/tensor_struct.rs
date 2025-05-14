@@ -20,8 +20,9 @@ impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
 
     pub fn flat_to_nd_index(
         flat_index: usize,
-        strides: &[usize; NO_DIMENSIONS],
+        shape: &[usize; NO_DIMENSIONS],
     ) -> [usize; NO_DIMENSIONS] {
+        let strides = Self::get_strides(shape);
         let mut nd_index = [0; NO_DIMENSIONS];
         let mut remaining = flat_index;
         for (d, dim) in strides.iter().enumerate() {

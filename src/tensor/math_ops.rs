@@ -417,9 +417,9 @@ impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
     pub fn sum(&self) -> f32 {
         let mut s = 0f32;
         let mut multi_dim_index: [usize; NO_DIMENSIONS];
-        let strides = self.strides();
+        let shape = self.shape();
         for flat_index in 0..self.no_elements() {
-            multi_dim_index = Self::flat_to_nd_index(flat_index, strides);
+            multi_dim_index = Self::flat_to_nd_index(flat_index, shape);
             s += self[&multi_dim_index]
         }
         s
