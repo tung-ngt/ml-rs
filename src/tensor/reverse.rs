@@ -11,7 +11,6 @@ impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
             for d in reverse_dims {
                 multi_dim_index[*d] = shape[*d] - multi_dim_index[*d] - 1;
             }
-            println!("{:?}", multi_dim_index);
             reverse_data.push(self[&multi_dim_index]);
         }
 
