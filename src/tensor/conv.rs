@@ -1,5 +1,3 @@
-use std::usize;
-
 use super::Tensor;
 
 impl Tensor<4> {
