@@ -1,3 +1,4 @@
+pub mod conv;
 pub mod leaky_relu;
 pub mod linear;
 pub mod prelu;
