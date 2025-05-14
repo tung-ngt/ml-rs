@@ -42,9 +42,9 @@ impl Tensor<4> {
         let mut data = Vec::with_capacity(out_shape.iter().product());
 
         for b in 0..B {
-            for c_out in 0..C_out {
-                for h_out in 0..H_out {
-                    for w_out in 0..W_out {
+            for h_out in 0..H_out {
+                for w_out in 0..W_out {
+                    for c_out in 0..C_out {
                         let mut pixel_sum = 0.0;
 
                         for h_k in 0..H_k {
