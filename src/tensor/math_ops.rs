@@ -1,4 +1,5 @@
 use super::Tensor;
+use core::f32;
 use std::{array, ops, sync::Arc};
 
 impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
@@ -173,6 +174,9 @@ impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
                 a_shape
             );
 
+            if !a_tensor[&multi_dim_index].is_finite() || !b_tensor[&multi_dim_index].is_finite() {
+                return false;
+            }
             if (a_tensor[&multi_dim_index] - b_tensor[&multi_dim_index]).abs() >= 1e-6 {
                 return false;
             }
