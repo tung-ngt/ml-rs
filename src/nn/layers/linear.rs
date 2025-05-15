@@ -1,16 +1,16 @@
-use crate::nn::{Backward, Forward, Layer, Optimizer, Update};
+use crate::nn::{Backward, Forward, InputGrad, Layer, Optimizer, Update};
 use crate::tensor::Tensor;
 
 pub struct Linear {
-    input: Tensor<2>,
-    pub weights: Tensor<2>,
-    pub biases: Tensor<1>,
+    input: Option<Tensor<2>>,
+    weights: Tensor<2>,
+    biases: Tensor<1>,
 }
 
 impl Linear {
     pub fn new(in_features: usize, out_features: usize) -> Self {
         Self {
-            input: Tensor::new(&[1, in_features]),
+            input: None,
             weights: Tensor::filled(&[out_features, in_features], 1.0),
             biases: Tensor::vector_filled(out_features, 1.0),
         }
@@ -21,10 +21,18 @@ impl Linear {
         G: FnMut() -> f32,
     {
         Self {
-            input: Tensor::new(&[1, in_features]),
+            input: None,
             weights: Tensor::matrix_random(out_features, in_features, random_generator),
             biases: Tensor::vector_random(out_features, random_generator),
         }
+    }
+
+    pub fn weights(&self) -> &Tensor<2> {
+        &self.weights
+    }
+
+    pub fn biases(&self) -> &Tensor<1> {
+        &self.biases
     }
 }
 
@@ -42,32 +50,42 @@ impl Forward<2, 2> for Linear {
             out_features,
         );
 
-        self.input = input.clone();
+        self.input = Some(input.clone());
 
         (input * &self.weights.t()).row_add(&self.biases)
     }
 }
 
+pub struct LinearGrad {
+    input: Tensor<2>,
+    weights: Tensor<2>,
+    biases: Tensor<1>,
+}
+
+impl InputGrad<2> for LinearGrad {
+    fn input(&self) -> &Tensor<2> {
+        &self.input
+    }
+}
+
 impl Backward<2, 2> for Linear {
-    fn backward(&self, next_grad: &Tensor<2>) -> Self {
-        Linear {
+    type Grad = LinearGrad;
+    fn backward(&self, next_grad: &Tensor<2>) -> Self::Grad {
+        Self::Grad {
             input: next_grad * &self.weights,
-            weights: &next_grad.t() * &self.input,
+            weights: &next_grad.t() * self.input.as_ref().expect("havent forward"),
             biases: next_grad.sum_row(),
         }
-    }
-
-    fn input_grad(&self) -> Tensor<2> {
-        self.input.clone()
     }
 }
 
 impl Update for Linear {
-    fn update(mut self, optimizer: &mut impl Optimizer, grad: Self) -> Self {
+    type Grad = LinearGrad;
+    fn update(mut self, optimizer: &mut impl Optimizer, grad: Self::Grad) -> Self {
         optimizer.step(&mut self.weights, &grad.weights);
         optimizer.step(&mut self.biases, &grad.biases);
         self
     }
 }
 
-impl Layer<2, 2, 2> for Linear {}
+impl Layer<2, 2> for Linear {}

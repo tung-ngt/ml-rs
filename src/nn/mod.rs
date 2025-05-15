@@ -8,22 +8,23 @@ pub trait Forward<const INPUT_DIMENSIONS: usize, const OUTPUT_DIMENSIONS: usize>
     fn forward(&mut self, input: &Tensor<INPUT_DIMENSIONS>) -> Tensor<OUTPUT_DIMENSIONS>;
 }
 
-pub trait Backward<const INPUT_DIMENSIONS: usize, const NEXTGRAD_DIMENSIONS: usize> {
-    fn backward(&self, next_grad: &Tensor<NEXTGRAD_DIMENSIONS>) -> Self;
-    fn input_grad(&self) -> Tensor<INPUT_DIMENSIONS>;
+pub trait InputGrad<const INPUT_DIMENSIONS: usize> {
+    fn input(&self) -> &Tensor<INPUT_DIMENSIONS>;
+}
+
+pub trait Backward<const INPUT_DIMENSIONS: usize, const OUTPUT_DIMENSIONS: usize> {
+    type Grad: InputGrad<INPUT_DIMENSIONS>;
+    fn backward(&self, next_grad: &Tensor<OUTPUT_DIMENSIONS>) -> Self::Grad;
 }
 
 pub trait Update {
-    fn update(self, optimizer: &mut impl Optimizer, grad: Self) -> Self;
+    type Grad;
+    fn update(self, optimizer: &mut impl Optimizer, grad: Self::Grad) -> Self;
 }
 
-pub trait Layer<
-    const INPUT_DIMENSIONS: usize,
-    const OUTPUT_DIMENSIONS: usize,
-    const NEXTGRAD_DIMENSIONS: usize,
->:
+pub trait Layer<const INPUT_DIMENSIONS: usize, const OUTPUT_DIMENSIONS: usize>:
     Forward<INPUT_DIMENSIONS, OUTPUT_DIMENSIONS>
-    + Backward<INPUT_DIMENSIONS, NEXTGRAD_DIMENSIONS>
+    + Backward<INPUT_DIMENSIONS, OUTPUT_DIMENSIONS>
     + Update
 {
 }

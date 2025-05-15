@@ -1,9 +1,12 @@
 use crate::{
     nn::{
-        layers::{conv::Conv2D, flatten::Flatten},
+        layers::{
+            conv::{self, Conv2D, Conv2DGrad},
+            flatten::{Flatten, FlattenGrad},
+        },
         loss::mse::{reduction, MSE},
         optimizer::{self, sgd::SGD},
-        Backward, Forward, Layer, Loss, Optimizer, Update,
+        Backward, Forward, InputGrad, Layer, Loss, Optimizer, Update,
     },
     tensor,
     tensor::{conv::PaddingType, utils::pad2d_same_size, Tensor},
@@ -35,31 +38,34 @@ impl Forward<4, 2> for Model {
     }
 }
 
-impl Backward<4, 2> for Model {
-    fn backward(&self, next_grad: &Tensor<2>) -> Self {
-        let flatten_grad = self.flatten.backward(next_grad);
-        let conv_grad = self
-            .conv
-            .backward(&Backward::<4, 2>::input_grad(&flatten_grad));
-        Self {
-            conv: conv_grad,
-            flatten: flatten_grad,
-        }
-    }
+struct ModelGrad {
+    conv: Conv2DGrad,
+}
 
-    fn input_grad(&self) -> Tensor<4> {
-        self.conv.input_grad()
+impl InputGrad<4> for ModelGrad {
+    fn input(&self) -> &Tensor<4> {
+        self.conv.input()
+    }
+}
+
+impl Backward<4, 2> for Model {
+    type Grad = ModelGrad;
+    fn backward(&self, next_grad: &Tensor<2>) -> Self::Grad {
+        let flatten_grad = self.flatten.backward(next_grad);
+        let conv_grad = self.conv.backward(flatten_grad.input());
+        Self::Grad { conv: conv_grad }
     }
 }
 
 impl Update for Model {
-    fn update(mut self, optimizer: &mut impl Optimizer, grad: Self) -> Self {
+    type Grad = ModelGrad;
+    fn update(mut self, optimizer: &mut impl Optimizer, grad: Self::Grad) -> Self {
         self.conv = self.conv.update(optimizer, grad.conv);
         self
     }
 }
 
-impl Layer<4, 2, 2> for Model {}
+impl Layer<4, 2> for Model {}
 
 pub fn train() {
     let data = tensor!(1, 3, 3, 1 => [

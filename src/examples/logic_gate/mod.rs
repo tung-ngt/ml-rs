@@ -135,12 +135,18 @@ pub fn train_sigmoid<G>(
     let test = datas.clone();
     let output = model.forward(&test);
     println!("output = {:.4}", output);
-    println!("start lin1_weights = {:.10}", model.lin1.weights);
-    println!("start lin1_biases = {:.10}", model.lin1.biases);
+    println!("start lin1_weights = {:.10}", model.lin1.weights());
+    println!("start lin1_biases = {:.10}", model.lin1.biases());
 
     if two_layers {
-        println!("start lin2_weights = {:.10}", model.lin2.weights);
-        println!("start lin2_biases = {:.10}", model.lin2.biases);
+        println!(
+            "start lin2_weights = {:.10}",
+            model.lin2.as_ref().unwrap().weights()
+        );
+        println!(
+            "start lin2_biases = {:.10}",
+            model.lin2.as_ref().unwrap().biases()
+        );
     }
     println!("---------------------------------------------------------------");
 
@@ -161,12 +167,18 @@ pub fn train_sigmoid<G>(
 
     println!("---------------------------------------------------------------");
     println!("output = {:.4}", output);
-    println!("end lin1_weights = {:.10}", model.lin1.weights);
-    println!("end lin1_biases = {:.10}", model.lin1.biases);
+    println!("end lin1_weights = {:.10}", model.lin1.weights());
+    println!("end lin1_biases = {:.10}", model.lin1.biases());
 
     if two_layers {
-        println!("end lin2_weights = {:.10}", model.lin2.weights);
-        println!("end lin2_biases = {:.10}", model.lin2.biases);
+        println!(
+            "end lin2_weights = {:.10}",
+            model.lin2.as_ref().unwrap().weights()
+        );
+        println!(
+            "end lin2_biases = {:.10}",
+            model.lin2.as_ref().unwrap().biases()
+        );
     }
 }
 
@@ -190,12 +202,18 @@ pub fn train_relu<G>(
     let test = datas.clone();
     let output = model.forward(&test);
     println!("output = {:.4}", output);
-    println!("start lin1_weights = {:.10}", model.lin1.weights);
-    println!("start lin1_biases = {:.10}", model.lin1.biases);
+    println!("start lin1_weights = {:.10}", model.lin1.weights());
+    println!("start lin1_biases = {:.10}", model.lin1.biases());
 
     if two_layers {
-        println!("start lin2_weights = {:.10}", model.lin2.weights);
-        println!("start lin2_biases = {:.10}", model.lin2.biases);
+        println!(
+            "start lin2_weights = {:.10}",
+            model.lin2.as_ref().unwrap().weights()
+        );
+        println!(
+            "start lin2_biases = {:.10}",
+            model.lin2.as_ref().unwrap().biases()
+        );
     }
     println!("---------------------------------------------------------------");
 
@@ -219,11 +237,17 @@ pub fn train_relu<G>(
 
     println!("---------------------------------------------------------------");
     println!("output = {:.4}", output);
-    println!("end lin1_weights = {:.10}", model.lin1.weights);
-    println!("end lin1_biases = {:.10}", model.lin1.biases);
+    println!("end lin1_weights = {:.10}", model.lin1.weights());
+    println!("end lin1_biases = {:.10}", model.lin1.biases());
 
     if two_layers {
-        println!("end lin2_weights = {:.10}", model.lin2.weights);
-        println!("end lin2_biases = {:.10}", model.lin2.biases);
+        println!(
+            "end lin2_weights = {:.10}",
+            model.lin2.as_ref().unwrap().weights()
+        );
+        println!(
+            "end lin2_biases = {:.10}",
+            model.lin2.as_ref().unwrap().biases()
+        );
     }
 }

@@ -1,16 +1,14 @@
 use crate::{
-    nn::{Backward, Forward, Layer, Optimizer, Update},
+    nn::{Backward, Forward, InputGrad, Layer, Optimizer, Update},
     tensor::Tensor,
 };
 pub struct ReLU<const INPUT_DIMENSIONS: usize> {
-    input_relu: Tensor<INPUT_DIMENSIONS>,
+    input: Option<Tensor<INPUT_DIMENSIONS>>,
 }
 
 impl<const INPUT_DIMENSIONS: usize> Default for ReLU<INPUT_DIMENSIONS> {
     fn default() -> Self {
-        Self {
-            input_relu: Tensor::new(&[1; INPUT_DIMENSIONS]),
-        }
+        Self { input: None }
     }
 }
 
@@ -32,32 +30,45 @@ impl<const INPUT_DIMENSIONS: usize> Forward<INPUT_DIMENSIONS, INPUT_DIMENSIONS>
     for ReLU<INPUT_DIMENSIONS>
 {
     fn forward(&mut self, input: &Tensor<INPUT_DIMENSIONS>) -> Tensor<INPUT_DIMENSIONS> {
-        self.input_relu = input.clone();
+        self.input = Some(input.clone());
         input.apply(Self::relu)
+    }
+}
+
+pub struct ReLUGrad<const INPUT_DIMENSIONS: usize> {
+    input: Tensor<INPUT_DIMENSIONS>,
+}
+
+impl<const INPUT_DIMENSIONS: usize> InputGrad<INPUT_DIMENSIONS> for ReLUGrad<INPUT_DIMENSIONS> {
+    fn input(&self) -> &Tensor<INPUT_DIMENSIONS> {
+        &self.input
     }
 }
 
 impl<const INPUT_DIMENSIONS: usize> Backward<INPUT_DIMENSIONS, INPUT_DIMENSIONS>
     for ReLU<INPUT_DIMENSIONS>
 {
-    fn backward(&self, next_grad: &Tensor<INPUT_DIMENSIONS>) -> Self {
-        Self {
-            input_relu: self.input_relu.apply(Self::derivative).mul_elem(next_grad),
+    type Grad = ReLUGrad<INPUT_DIMENSIONS>;
+    fn backward(&self, next_grad: &Tensor<INPUT_DIMENSIONS>) -> Self::Grad {
+        Self::Grad {
+            input: self
+                .input
+                .as_ref()
+                .expect("havent forward")
+                .apply(Self::derivative)
+                .mul_elem(next_grad),
         }
-    }
-
-    fn input_grad(&self) -> Tensor<INPUT_DIMENSIONS> {
-        self.input_relu.clone()
     }
 }
 
 impl<const INPUT_DIMENSIONS: usize> Update for ReLU<INPUT_DIMENSIONS> {
-    fn update(self, _optimizer: &mut impl Optimizer, _grad: Self) -> Self {
+    type Grad = ReLUGrad<INPUT_DIMENSIONS>;
+    fn update(self, _optimizer: &mut impl Optimizer, _grad: Self::Grad) -> Self {
         self
     }
 }
 
-impl<const INPUT_DIMENSIONS: usize> Layer<INPUT_DIMENSIONS, INPUT_DIMENSIONS, INPUT_DIMENSIONS>
+impl<const INPUT_DIMENSIONS: usize> Layer<INPUT_DIMENSIONS, INPUT_DIMENSIONS>
     for ReLU<INPUT_DIMENSIONS>
 {
 }

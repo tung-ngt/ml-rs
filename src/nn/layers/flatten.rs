@@ -1,11 +1,10 @@
 use crate::{
-    nn::{Backward, Forward, Layer, Optimizer, Update},
+    nn::{Backward, Forward, InputGrad, Layer, Optimizer, Update},
     tensor::Tensor,
 };
 
 pub struct Flatten<const INPUT_DIMENSIONS: usize> {
-    input: Tensor<INPUT_DIMENSIONS>,
-    input_shape: [usize; INPUT_DIMENSIONS],
+    input_shape: Option<[usize; INPUT_DIMENSIONS]>,
     start: usize,
     stop: usize,
 }
@@ -13,8 +12,7 @@ pub struct Flatten<const INPUT_DIMENSIONS: usize> {
 impl<const INPUT_DIMENSIONS: usize> Flatten<INPUT_DIMENSIONS> {
     pub fn new(start: usize, stop: usize) -> Self {
         Self {
-            input: Tensor::empty(),
-            input_shape: [0; INPUT_DIMENSIONS],
+            input_shape: None,
             start,
             stop,
         }
@@ -25,35 +23,40 @@ impl<const INPUT_DIMENSIONS: usize, const OUTPUT_DIMENSIONS: usize>
     Forward<INPUT_DIMENSIONS, OUTPUT_DIMENSIONS> for Flatten<INPUT_DIMENSIONS>
 {
     fn forward(&mut self, input: &Tensor<INPUT_DIMENSIONS>) -> Tensor<OUTPUT_DIMENSIONS> {
-        self.input_shape = *input.shape();
+        self.input_shape = Some(*input.shape());
         input.flatten(&(self.start..self.stop))
+    }
+}
+
+pub struct FlattenGrad<const INPUT_DIMENSIONS: usize> {
+    input: Tensor<INPUT_DIMENSIONS>,
+}
+
+impl<const INPUT_DIMENSIONS: usize> InputGrad<INPUT_DIMENSIONS> for FlattenGrad<INPUT_DIMENSIONS> {
+    fn input(&self) -> &Tensor<INPUT_DIMENSIONS> {
+        &self.input
     }
 }
 
 impl<const INPUT_DIMENSIONS: usize, const OUTPUT_DIMENSIONS: usize>
     Backward<INPUT_DIMENSIONS, OUTPUT_DIMENSIONS> for Flatten<INPUT_DIMENSIONS>
 {
-    fn backward(&self, next_grad: &Tensor<OUTPUT_DIMENSIONS>) -> Self {
-        Self {
-            input: next_grad.reshape(&self.input_shape),
-            input_shape: self.input_shape,
-            stop: self.stop,
-            start: self.start,
+    type Grad = FlattenGrad<INPUT_DIMENSIONS>;
+    fn backward(&self, next_grad: &Tensor<OUTPUT_DIMENSIONS>) -> Self::Grad {
+        Self::Grad {
+            input: next_grad.reshape(self.input_shape.as_ref().expect("havent forward")),
         }
-    }
-
-    fn input_grad(&self) -> Tensor<INPUT_DIMENSIONS> {
-        self.input.clone()
     }
 }
 
 impl<const INPUT_DIMENSIONS: usize> Update for Flatten<INPUT_DIMENSIONS> {
-    fn update(self, _optimizer: &mut impl Optimizer, _grad: Self) -> Self {
+    type Grad = FlattenGrad<INPUT_DIMENSIONS>;
+    fn update(self, _optimizer: &mut impl Optimizer, _grad: Self::Grad) -> Self {
         self
     }
 }
 
 impl<const INPUT_DIMENSIONS: usize, const OUTPUT_DIMENSIONS: usize>
-    Layer<INPUT_DIMENSIONS, OUTPUT_DIMENSIONS, OUTPUT_DIMENSIONS> for Flatten<INPUT_DIMENSIONS>
+    Layer<INPUT_DIMENSIONS, OUTPUT_DIMENSIONS> for Flatten<INPUT_DIMENSIONS>
 {
 }

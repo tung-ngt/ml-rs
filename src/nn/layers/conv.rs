@@ -1,9 +1,9 @@
 use crate::{
-    nn::{Backward, Forward, Layer, Optimizer, Update},
+    nn::{Backward, Forward, InputGrad, Layer, Optimizer, Update},
     tensor::{conv::PaddingType, utils::pad2d_full_size, Tensor},
 };
 pub struct Conv2D {
-    input: Tensor<4>,
+    input: Option<Tensor<4>>,
     weights: Tensor<4>,
     biases: Tensor<1>,
     strides: (usize, usize),
@@ -17,7 +17,7 @@ impl Conv2D {
         strides: (usize, usize),
     ) -> Self {
         Self {
-            input: Tensor::new(&[1, 1, 1, 1]),
+            input: None,
             weights: Tensor::filled(&[c_out, kernel_size.0, kernel_size.1, c_in], 1.0),
             biases: Tensor::vector_filled(4, 1.0),
             strides,
@@ -38,13 +38,26 @@ impl Conv2D {
 
 impl Forward<4, 4> for Conv2D {
     fn forward(&mut self, input: &Tensor<4>) -> Tensor<4> {
-        self.input = input.clone();
+        self.input = Some(input.clone());
         input.conv2d(&self.weights, self.strides)
     }
 }
 
+pub struct Conv2DGrad {
+    input: Tensor<4>,
+    weights: Tensor<4>,
+    biases: Tensor<1>,
+}
+
+impl InputGrad<4> for Conv2DGrad {
+    fn input(&self) -> &Tensor<4> {
+        &self.input
+    }
+}
+
 impl Backward<4, 4> for Conv2D {
-    fn backward(&self, next_grad: &Tensor<4>) -> Self {
+    type Grad = Conv2DGrad;
+    fn backward(&self, next_grad: &Tensor<4>) -> Self::Grad {
         let &[_b, h_out, w_out, _c_out] = next_grad.shape();
         let &[_, h_k, w_k, _c_in] = self.weights.shape();
         let input_grad = next_grad
@@ -59,28 +72,27 @@ impl Backward<4, 4> for Conv2D {
 
         let weight_grad = self
             .input
+            .as_ref()
+            .expect("havent forward")
             .transpose(&[3, 1, 2, 0])
             .conv2d(&next_grad.transpose(&[3, 1, 2, 0]), self.strides)
             .transpose(&[3, 1, 2, 0]);
 
-        Self {
+        Self::Grad {
             input: input_grad,
-            strides: self.strides,
             weights: weight_grad,
             biases: self.biases.clone(),
         }
     }
-    fn input_grad(&self) -> Tensor<4> {
-        self.input.clone()
-    }
 }
 
 impl Update for Conv2D {
-    fn update(mut self, optimizer: &mut impl Optimizer, grad: Self) -> Self {
+    type Grad = Conv2DGrad;
+    fn update(mut self, optimizer: &mut impl Optimizer, grad: Self::Grad) -> Self {
         optimizer.step(&mut self.weights, &grad.weights);
         optimizer.step(&mut self.biases, &grad.biases);
         self
     }
 }
 
-//impl Layer<4, 4, 4> for Conv2D {}
+impl Layer<4, 4> for Conv2D {}

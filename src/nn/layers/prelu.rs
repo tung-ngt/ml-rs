@@ -1,16 +1,16 @@
 use crate::{
-    nn::{Backward, Forward, Layer, Optimizer, Update},
+    nn::{Backward, Forward, InputGrad, Layer, Optimizer, Update},
     tensor::Tensor,
 };
 pub struct PReLU<const INPUT_DIMENSIONS: usize> {
-    input_prelu: Tensor<INPUT_DIMENSIONS>,
+    input: Option<Tensor<INPUT_DIMENSIONS>>,
     negative_slope: Tensor<1>,
 }
 
 impl<const INPUT_DIMENSIONS: usize> Default for PReLU<INPUT_DIMENSIONS> {
     fn default() -> Self {
         Self {
-            input_prelu: Tensor::new(&[1; INPUT_DIMENSIONS]),
+            input: None,
             negative_slope: Tensor::vector_filled(1, 0.01),
         }
     }
@@ -19,7 +19,7 @@ impl<const INPUT_DIMENSIONS: usize> Default for PReLU<INPUT_DIMENSIONS> {
 impl<const INPUT_DIMENSIONS: usize> PReLU<INPUT_DIMENSIONS> {
     pub fn new(negative_slope: f32) -> Self {
         Self {
-            input_prelu: Tensor::new(&[1; INPUT_DIMENSIONS]),
+            input: None,
             negative_slope: Tensor::vector_filled(1, negative_slope),
         }
     }
@@ -53,37 +53,48 @@ impl<const INPUT_DIMENSIONS: usize> Forward<INPUT_DIMENSIONS, INPUT_DIMENSIONS>
     for PReLU<INPUT_DIMENSIONS>
 {
     fn forward(&mut self, input: &Tensor<INPUT_DIMENSIONS>) -> Tensor<INPUT_DIMENSIONS> {
-        self.input_prelu = input.clone();
+        self.input = Some(input.clone());
         input.apply(|x| self.prelu(x))
+    }
+}
+
+pub struct PReLUGrad<const INPUT_DIMENSIONS: usize> {
+    input: Tensor<INPUT_DIMENSIONS>,
+    negative_slope: Tensor<1>,
+}
+
+impl<const INPUT_DIMENSIONS: usize> InputGrad<INPUT_DIMENSIONS> for PReLUGrad<INPUT_DIMENSIONS> {
+    fn input(&self) -> &Tensor<INPUT_DIMENSIONS> {
+        &self.input
     }
 }
 
 impl<const INPUT_DIMENSIONS: usize> Backward<INPUT_DIMENSIONS, INPUT_DIMENSIONS>
     for PReLU<INPUT_DIMENSIONS>
 {
-    fn backward(&self, next_grad: &Tensor<INPUT_DIMENSIONS>) -> Self {
-        Self {
-            input_prelu: self
-                .input_prelu
+    type Grad = PReLUGrad<INPUT_DIMENSIONS>;
+    fn backward(&self, next_grad: &Tensor<INPUT_DIMENSIONS>) -> Self::Grad {
+        Self::Grad {
+            input: self
+                .input
+                .as_ref()
+                .expect("havent forward")
                 .apply(|x| self.derivative_wrt_input(x))
                 .mul_elem(next_grad),
             negative_slope: self.negative_slope.apply(|x| self.derivative_wrt_slope(x)),
         }
     }
-
-    fn input_grad(&self) -> Tensor<INPUT_DIMENSIONS> {
-        self.input_prelu.clone()
-    }
 }
 
 impl<const INPUT_DIMENSIONS: usize> Update for PReLU<INPUT_DIMENSIONS> {
-    fn update(mut self, optimizer: &mut impl Optimizer, grad: Self) -> Self {
+    type Grad = PReLUGrad<INPUT_DIMENSIONS>;
+    fn update(mut self, optimizer: &mut impl Optimizer, grad: Self::Grad) -> Self {
         optimizer.step(&mut self.negative_slope, &grad.negative_slope);
         self
     }
 }
 
-impl<const INPUT_DIMENSIONS: usize> Layer<INPUT_DIMENSIONS, INPUT_DIMENSIONS, INPUT_DIMENSIONS>
+impl<const INPUT_DIMENSIONS: usize> Layer<INPUT_DIMENSIONS, INPUT_DIMENSIONS>
     for PReLU<INPUT_DIMENSIONS>
 {
 }

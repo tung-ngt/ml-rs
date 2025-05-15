@@ -1,7 +1,10 @@
 use crate::{
     nn::{
-        layers::{linear::Linear, relu::ReLU},
-        Backward, Forward, Layer, Optimizer, Update,
+        layers::{
+            linear::{Linear, LinearGrad},
+            relu::ReLU,
+        },
+        Backward, Forward, InputGrad, Layer, Optimizer, Update,
     },
     tensor::Tensor,
 };
@@ -9,8 +12,8 @@ use crate::{
 pub struct ReLUModel {
     pub lin1: Linear,
     pub relu1: ReLU<2>,
-    pub lin2: Linear,
-    pub relu2: ReLU<2>,
+    pub lin2: Option<Linear>,
+    pub relu2: Option<ReLU<2>>,
     pub two_layers: bool,
 }
 
@@ -26,8 +29,16 @@ impl ReLUModel {
                 },
             ),
             relu1: ReLU::default(),
-            lin2: Linear::new(in_features, out_features),
-            relu2: ReLU::default(),
+            lin2: if two_layers {
+                Some(Linear::new(in_features, out_features))
+            } else {
+                None
+            },
+            relu2: if two_layers {
+                Some(ReLU::default())
+            } else {
+                None
+            },
             two_layers,
         }
     }
@@ -52,8 +63,20 @@ impl ReLUModel {
                 random_generator,
             ),
             relu1: ReLU::default(),
-            lin2: Linear::random_init(in_features, out_features, random_generator),
-            relu2: ReLU::default(),
+            lin2: if two_layers {
+                Some(Linear::random_init(
+                    in_features,
+                    out_features,
+                    random_generator,
+                ))
+            } else {
+                None
+            },
+            relu2: if two_layers {
+                Some(ReLU::default())
+            } else {
+                None
+            },
             two_layers,
         }
     }
@@ -66,51 +89,55 @@ impl Forward<2, 2> for ReLUModel {
         if !self.two_layers {
             return x;
         }
-        let x = self.lin2.forward(&x);
-        self.relu2.forward(&x)
+        let x = self.lin2.as_mut().unwrap().forward(&x);
+        self.relu2.as_mut().unwrap().forward(&x)
+    }
+}
+
+pub struct ReLUModelGrad {
+    pub lin1: LinearGrad,
+    pub lin2: Option<LinearGrad>,
+}
+
+impl InputGrad<2> for ReLUModelGrad {
+    fn input(&self) -> &Tensor<2> {
+        self.lin1.input()
     }
 }
 
 impl Backward<2, 2> for ReLUModel {
-    fn backward(&self, next_grad: &Tensor<2>) -> Self {
+    type Grad = ReLUModelGrad;
+    fn backward(&self, next_grad: &Tensor<2>) -> Self::Grad {
         if self.two_layers {
-            let relu2_grad = self.relu2.backward(next_grad);
-            let lin2_grad = self.lin2.backward(&relu2_grad.input_grad());
-            let relu1_grad = self.relu1.backward(&lin2_grad.input_grad());
-            let lin1_grad = self.lin1.backward(&relu1_grad.input_grad());
-            Self {
+            let relu2_grad = self.relu2.as_ref().unwrap().backward(next_grad);
+            let lin2_grad = self.lin2.as_ref().unwrap().backward(relu2_grad.input());
+
+            let relu1_grad = self.relu1.backward(lin2_grad.input());
+            let lin1_grad = self.lin1.backward(relu1_grad.input());
+            Self::Grad {
                 lin1: lin1_grad,
-                relu1: relu1_grad,
-                lin2: lin2_grad,
-                relu2: relu2_grad,
-                two_layers: self.two_layers,
+                lin2: Some(lin2_grad),
             }
         } else {
             let relu1_grad = self.relu1.backward(next_grad);
-            let lin1_grad = self.lin1.backward(&relu1_grad.input_grad());
-            Self {
+            let lin1_grad = self.lin1.backward(relu1_grad.input());
+            Self::Grad {
                 lin1: lin1_grad,
-                relu1: relu1_grad,
-                lin2: Linear::new(1, 1),
-                relu2: ReLU::default(),
-                two_layers: self.two_layers,
+                lin2: None,
             }
         }
-    }
-
-    fn input_grad(&self) -> Tensor<2> {
-        self.lin1.input_grad()
     }
 }
 
 impl Update for ReLUModel {
-    fn update(mut self, optimizer: &mut impl Optimizer, grad: Self) -> Self {
+    type Grad = ReLUModelGrad;
+    fn update(mut self, optimizer: &mut impl Optimizer, grad: Self::Grad) -> Self {
         if self.two_layers {
-            self.lin2 = self.lin2.update(optimizer, grad.lin2);
+            self.lin2 = Some(self.lin2.unwrap().update(optimizer, grad.lin2.unwrap()));
         }
         self.lin1 = self.lin1.update(optimizer, grad.lin1);
         self
     }
 }
 
-impl Layer<2, 2, 2> for ReLUModel {}
+impl Layer<2, 2> for ReLUModel {}
