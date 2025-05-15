@@ -133,6 +133,41 @@ pub fn pad2d_full_size(
     (height_padding, width_padding)
 }
 
+pub fn conv_output_size(
+    images_size: &[usize; 4],
+    kernels_size: &[usize; 4],
+    strides: (usize, usize),
+) -> [usize; 4] {
+    let &[b, h, w, _c_in] = images_size;
+
+    let &[c_out, k_h, k_w, _] = kernels_size;
+    let new_h = (h - k_h) / strides.0 + 1;
+    let new_w = (w - k_w) / strides.1 + 1;
+    [b, new_w, new_h, c_out]
+}
+
+pub fn flatten_output_shape<const INPUT_DIMENSIONS: usize, const OUTPUT_DIMENSIONS: usize>(
+    input_shape: &[usize; INPUT_DIMENSIONS],
+    start: Option<usize>,
+    stop: Option<usize>,
+) -> [usize; OUTPUT_DIMENSIONS] {
+    let mut new_shape = [1; OUTPUT_DIMENSIONS];
+
+    let start = start.unwrap_or(0);
+    let stop = stop.unwrap_or(INPUT_DIMENSIONS);
+
+    let flatten_dims = start..stop;
+
+    let mut n = OUTPUT_DIMENSIONS;
+    for (i, s) in input_shape.iter().enumerate().rev() {
+        if !flatten_dims.contains(&i) || i == INPUT_DIMENSIONS - 1 {
+            n -= 1;
+        }
+        new_shape[n] *= *s;
+    }
+    new_shape
+}
+
 #[cfg(test)]
 mod tensor_display_tests {
     use crate::tensor::Tensor;

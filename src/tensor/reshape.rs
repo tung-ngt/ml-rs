@@ -1,27 +1,13 @@
-use super::Tensor;
+use super::{utils::flatten_output_shape, Tensor};
 
-impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
+impl<const INPUT_DIMENSIONS: usize> Tensor<INPUT_DIMENSIONS> {
     pub fn flatten<const OUTPUT_DIMENSIONS: usize>(
         &self,
         start: Option<usize>,
         stop: Option<usize>,
     ) -> Tensor<OUTPUT_DIMENSIONS> {
         let shape = self.shape();
-        let mut new_shape = [1; OUTPUT_DIMENSIONS];
-
-        let start = start.unwrap_or(0);
-        let stop = stop.unwrap_or(NO_DIMENSIONS);
-
-        let flatten_dims = start..stop;
-
-        let mut n = OUTPUT_DIMENSIONS;
-        for (i, s) in self.shape().iter().enumerate().rev() {
-            if !flatten_dims.contains(&i) || i == NO_DIMENSIONS - 1 {
-                n -= 1;
-            }
-            new_shape[n] *= *s;
-        }
-
+        let new_shape = flatten_output_shape(self.shape(), start, stop);
         let mut data = Vec::with_capacity(self.no_elements());
 
         for i in 0..self.no_elements() {
