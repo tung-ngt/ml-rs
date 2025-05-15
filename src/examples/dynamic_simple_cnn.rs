@@ -1,16 +1,12 @@
 use crate::{
     nn::{
-        layers::{
-            conv::{Conv2D, Conv2DGrad},
-            flatten::Flatten,
-            stack::Stack,
-        },
+        layers::{conv::Conv2D, flatten::Flatten, stack::Stack},
         loss::mse::{reduction, MSE},
         optimizer::{sgd::SGD, DynOptimizer},
-        Backward, DynLayer, Forward, InputGrad, Loss, Optimizer, Update,
+        DynLayer, Loss,
     },
     tensor,
-    tensor::{conv::PaddingType, utils::pad2d_same_size, Tensor},
+    tensor::{conv::PaddingType, utils::pad2d_same_size},
 };
 
 pub fn train() {
