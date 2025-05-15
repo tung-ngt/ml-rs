@@ -1,14 +1,18 @@
-use std::ops::RangeBounds;
-
 use super::Tensor;
 
 impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
     pub fn flatten<const OUTPUT_DIMENSIONS: usize>(
         &self,
-        flatten_dims: &impl RangeBounds<usize>,
+        start: Option<usize>,
+        stop: Option<usize>,
     ) -> Tensor<OUTPUT_DIMENSIONS> {
         let shape = self.shape();
         let mut new_shape = [1; OUTPUT_DIMENSIONS];
+
+        let start = start.unwrap_or(0);
+        let stop = stop.unwrap_or(NO_DIMENSIONS);
+
+        let flatten_dims = start..stop;
 
         let mut n = OUTPUT_DIMENSIONS;
         for (i, s) in self.shape().iter().enumerate().rev() {
