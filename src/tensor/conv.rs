@@ -10,6 +10,7 @@ impl Tensor<4> {
     /// Will produce a matrix with the form (BxH_outxW_outxC_out)
     /// H_out = (H - H_k)/2 + 1
     /// W_out = (W - W_k)/2 + 1
+    #[allow(non_snake_case)]
     pub fn conv2d(&self, kernels: &Tensor<4>, strides: (usize, usize)) -> Tensor<4> {
         assert!(
             strides.0 > 0 && strides.1 > 0,
