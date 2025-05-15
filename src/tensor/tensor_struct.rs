@@ -111,6 +111,18 @@ impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
             shape: *shape,
         }
     }
+
+    pub fn empty() -> Self {
+        let strides = [1; NO_DIMENSIONS];
+        let shape = [1; NO_DIMENSIONS];
+        let data = vec![0.0];
+        Self {
+            data: data.into(),
+            offset: 0,
+            strides,
+            shape,
+        }
+    }
 }
 
 impl Tensor<1> {

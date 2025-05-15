@@ -5,7 +5,7 @@ use super::Tensor;
 impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
     pub fn flatten<const OUTPUT_DIMENSIONS: usize>(
         &self,
-        flatten_dims: impl RangeBounds<usize>,
+        flatten_dims: &impl RangeBounds<usize>,
     ) -> Tensor<OUTPUT_DIMENSIONS> {
         let shape = self.shape();
         let mut new_shape = [1; OUTPUT_DIMENSIONS];
