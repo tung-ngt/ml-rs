@@ -4,7 +4,7 @@ use crate::{
             linear::{Linear, LinearGrad},
             relu::ReLU,
         },
-        Backward, Forward, InputGrad, Layer, Optimizer, Update,
+        Backward, Forward, InputGrad, Optimizer, Update,
     },
     tensor::Tensor,
 };
@@ -100,8 +100,8 @@ pub struct ReLUModelGrad {
 }
 
 impl InputGrad<2> for ReLUModelGrad {
-    fn input(&self) -> &Tensor<2> {
-        self.lin1.input()
+    fn input(&self) -> Tensor<2> {
+        self.lin1.input().clone()
     }
 }
 
@@ -110,17 +110,17 @@ impl Backward<2, 2> for ReLUModel {
     fn backward(&self, next_grad: &Tensor<2>) -> Self::Grad {
         if self.two_layers {
             let relu2_grad = self.relu2.as_ref().unwrap().backward(next_grad);
-            let lin2_grad = self.lin2.as_ref().unwrap().backward(relu2_grad.input());
+            let lin2_grad = self.lin2.as_ref().unwrap().backward(&relu2_grad.input());
 
-            let relu1_grad = self.relu1.backward(lin2_grad.input());
-            let lin1_grad = self.lin1.backward(relu1_grad.input());
+            let relu1_grad = self.relu1.backward(&lin2_grad.input());
+            let lin1_grad = self.lin1.backward(&relu1_grad.input());
             Self::Grad {
                 lin1: lin1_grad,
                 lin2: Some(lin2_grad),
             }
         } else {
             let relu1_grad = self.relu1.backward(next_grad);
-            let lin1_grad = self.lin1.backward(relu1_grad.input());
+            let lin1_grad = self.lin1.backward(&relu1_grad.input());
             Self::Grad {
                 lin1: lin1_grad,
                 lin2: None,
@@ -131,13 +131,13 @@ impl Backward<2, 2> for ReLUModel {
 
 impl Update for ReLUModel {
     type Grad = ReLUModelGrad;
-    fn update(mut self, optimizer: &mut impl Optimizer, grad: Self::Grad) -> Self {
+    fn update(&mut self, optimizer: &mut impl Optimizer, grad: &Self::Grad) {
         if self.two_layers {
-            self.lin2 = Some(self.lin2.unwrap().update(optimizer, grad.lin2.unwrap()));
+            self.lin2
+                .as_mut()
+                .unwrap()
+                .update(optimizer, grad.lin2.as_ref().unwrap());
         }
-        self.lin1 = self.lin1.update(optimizer, grad.lin1);
-        self
+        self.lin1.update(optimizer, &grad.lin1);
     }
 }
-
-impl Layer<2, 2> for ReLUModel {}

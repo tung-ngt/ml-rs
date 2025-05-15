@@ -1,12 +1,12 @@
 use crate::{
     nn::{
         layers::{
-            conv::{self, Conv2D, Conv2DGrad},
-            flatten::{Flatten, FlattenGrad},
+            conv::{Conv2D, Conv2DGrad},
+            flatten::Flatten,
         },
         loss::mse::{reduction, MSE},
-        optimizer::{self, sgd::SGD},
-        Backward, Forward, InputGrad, Layer, Loss, Optimizer, Update,
+        optimizer::sgd::SGD,
+        Backward, Forward, InputGrad, Loss, Optimizer, Update,
     },
     tensor,
     tensor::{conv::PaddingType, utils::pad2d_same_size, Tensor},
@@ -26,7 +26,7 @@ impl Model {
     ) -> Self {
         Self {
             conv: Conv2D::new(c_in, c_out, kernel_size, strides),
-            flatten: Flatten::new(1, 4),
+            flatten: Flatten::new(Some(1), None),
         }
     }
 }
@@ -43,8 +43,8 @@ struct ModelGrad {
 }
 
 impl InputGrad<4> for ModelGrad {
-    fn input(&self) -> &Tensor<4> {
-        self.conv.input()
+    fn input(&self) -> Tensor<4> {
+        self.conv.input().clone()
     }
 }
 
@@ -52,20 +52,17 @@ impl Backward<4, 2> for Model {
     type Grad = ModelGrad;
     fn backward(&self, next_grad: &Tensor<2>) -> Self::Grad {
         let flatten_grad = self.flatten.backward(next_grad);
-        let conv_grad = self.conv.backward(flatten_grad.input());
+        let conv_grad = self.conv.backward(&flatten_grad.input());
         Self::Grad { conv: conv_grad }
     }
 }
 
 impl Update for Model {
     type Grad = ModelGrad;
-    fn update(mut self, optimizer: &mut impl Optimizer, grad: Self::Grad) -> Self {
-        self.conv = self.conv.update(optimizer, grad.conv);
-        self
+    fn update(&mut self, optimizer: &mut impl Optimizer, grad: &Self::Grad) {
+        self.conv.update(optimizer, &grad.conv);
     }
 }
-
-impl Layer<4, 2> for Model {}
 
 pub fn train() {
     let data = tensor!(1, 3, 3, 1 => [
@@ -113,7 +110,7 @@ pub fn train() {
         let loss_grad = loss_function.loss_grad(predict, label.clone());
         let model_grad = model.backward(&loss_grad);
 
-        model = model.update(&mut sgd, model_grad);
+        model.update(&mut sgd, &model_grad);
     }
 
     let predict = model.forward(&data);

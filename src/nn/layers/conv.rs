@@ -1,8 +1,15 @@
 use crate::{
-    nn::{Backward, Forward, InputGrad, Layer, Optimizer, Update},
-    tensor::{conv::PaddingType, utils::pad2d_full_size, Tensor},
+    nn::{optimizer::DynOptimizer, Backward, DynLayer, Forward, InputGrad, Optimizer, Update},
+    tensor::{
+        conv::PaddingType,
+        utils::{conv_output_size, pad2d_full_size},
+        Tensor,
+    },
 };
+
+use super::DynGrad;
 pub struct Conv2D {
+    input_shape: Option<[usize; 4]>,
     input: Option<Tensor<4>>,
     weights: Tensor<4>,
     biases: Tensor<1>,
@@ -17,8 +24,23 @@ impl Conv2D {
         strides: (usize, usize),
     ) -> Self {
         Self {
+            input_shape: None,
             input: None,
             weights: Tensor::filled(&[c_out, kernel_size.0, kernel_size.1, c_in], 1.0),
+            biases: Tensor::vector_filled(4, 1.0),
+            strides,
+        }
+    }
+
+    pub fn with_shape(
+        image_shape: &[usize; 4],
+        kernel_shape: &[usize; 4],
+        strides: (usize, usize),
+    ) -> Self {
+        Self {
+            input_shape: Some(*image_shape),
+            input: None,
+            weights: Tensor::filled(kernel_shape, 1.0),
             biases: Tensor::vector_filled(4, 1.0),
             strides,
         }
@@ -50,8 +72,8 @@ pub struct Conv2DGrad {
 }
 
 impl InputGrad<4> for Conv2DGrad {
-    fn input(&self) -> &Tensor<4> {
-        &self.input
+    fn input(&self) -> Tensor<4> {
+        self.input.clone()
     }
 }
 
@@ -88,11 +110,38 @@ impl Backward<4, 4> for Conv2D {
 
 impl Update for Conv2D {
     type Grad = Conv2DGrad;
-    fn update(mut self, optimizer: &mut impl Optimizer, grad: Self::Grad) -> Self {
+    fn update(&mut self, optimizer: &mut impl Optimizer, grad: &Self::Grad) {
         optimizer.step(&mut self.weights, &grad.weights);
         optimizer.step(&mut self.biases, &grad.biases);
-        self
     }
 }
 
-impl Layer<4, 4> for Conv2D {}
+impl DynLayer for Conv2D {
+    fn forward(&mut self, input: &Tensor<2>) -> Tensor<2> {
+        let input = input.reshape(
+            self.input_shape
+                .as_ref()
+                .expect("must give image shape for dyn conv forward"),
+        );
+        Forward::forward(self, &input).flatten(Some(1), None)
+    }
+
+    fn backward(&self, next_grad: &Tensor<2>) -> DynGrad {
+        let image_shape = self
+            .input_shape
+            .as_ref()
+            .expect("must give image shape for dyn conv backward");
+        let output_shape = conv_output_size(image_shape, self.weights.shape(), self.strides);
+        let next_grad = next_grad.reshape(&output_shape);
+        DynGrad::Conv2D(Backward::backward(self, &next_grad))
+    }
+
+    fn update(&mut self, optimizer: &mut DynOptimizer, grad: &DynGrad) {
+        let DynGrad::Conv2D(grad) = grad else {
+            return;
+        };
+
+        optimizer.step(&mut self.weights, &grad.weights);
+        optimizer.step(&mut self.biases, &grad.biases);
+    }
+}

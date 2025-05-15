@@ -4,7 +4,7 @@ use crate::{
             linear::{Linear, LinearGrad},
             sigmoid::Sigmoid,
         },
-        Backward, Forward, InputGrad, Layer, Optimizer, Update,
+        Backward, Forward, InputGrad, Optimizer, Update,
     },
     tensor::Tensor,
 };
@@ -100,8 +100,8 @@ pub struct SigmoidModelGrad {
 }
 
 impl InputGrad<2> for SigmoidModelGrad {
-    fn input(&self) -> &Tensor<2> {
-        self.lin1.input()
+    fn input(&self) -> Tensor<2> {
+        self.lin1.input().clone()
     }
 }
 
@@ -110,16 +110,16 @@ impl Backward<2, 2> for SigmoidModel {
     fn backward(&self, next_grad: &Tensor<2>) -> Self::Grad {
         if self.two_layers {
             let sigmoid2_grad = self.sigmoid2.as_ref().unwrap().backward(next_grad);
-            let lin2_grad = self.lin2.as_ref().unwrap().backward(sigmoid2_grad.input());
-            let sigmoid1_grad = self.sigmoid1.backward(lin2_grad.input());
-            let lin1_grad = self.lin1.backward(sigmoid1_grad.input());
+            let lin2_grad = self.lin2.as_ref().unwrap().backward(&sigmoid2_grad.input());
+            let sigmoid1_grad = self.sigmoid1.backward(&lin2_grad.input());
+            let lin1_grad = self.lin1.backward(&sigmoid1_grad.input());
             Self::Grad {
                 lin1: lin1_grad,
                 lin2: Some(lin2_grad),
             }
         } else {
             let sigmoid1_grad = self.sigmoid1.backward(next_grad);
-            let lin1_grad = self.lin1.backward(sigmoid1_grad.input());
+            let lin1_grad = self.lin1.backward(&sigmoid1_grad.input());
             Self::Grad {
                 lin1: lin1_grad,
                 lin2: None,
@@ -130,13 +130,13 @@ impl Backward<2, 2> for SigmoidModel {
 
 impl Update for SigmoidModel {
     type Grad = SigmoidModelGrad;
-    fn update(mut self, optimizer: &mut impl Optimizer, grad: Self::Grad) -> Self {
+    fn update(&mut self, optimizer: &mut impl Optimizer, grad: &Self::Grad) {
         if self.two_layers {
-            self.lin2 = Some(self.lin2.unwrap().update(optimizer, grad.lin2.unwrap()));
+            self.lin2
+                .as_mut()
+                .unwrap()
+                .update(optimizer, grad.lin2.as_ref().unwrap());
         }
-        self.lin1 = self.lin1.update(optimizer, grad.lin1);
-        self
+        self.lin1.update(optimizer, &grad.lin1);
     }
 }
-
-impl Layer<2, 2> for SigmoidModel {}

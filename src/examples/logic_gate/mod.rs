@@ -160,7 +160,7 @@ pub fn train_sigmoid<G>(
         let model_grad = model.backward(&loss_grad);
         println!("({}) loss = {:.10}", i, loss);
 
-        model = model.update(&mut optimizer, model_grad);
+        model.update(&mut optimizer, &model_grad);
     }
     let test = datas.clone();
     let output = model.forward(&test);
@@ -230,7 +230,7 @@ pub fn train_relu<G>(
         //println!("({}) grad_biases = {:.10}", i, grad.biases);
         //println!("({}) weights = {:.10}", i, lin.weights);
         //println!("({}) biases = {:.10}", i, lin.biases);
-        model = model.update(&mut optimizer, model_grad);
+        model.update(&mut optimizer, &model_grad);
     }
     let test = datas.clone();
     let output = model.forward(&test);

@@ -1,7 +1,9 @@
 use crate::{
-    nn::{Backward, Forward, InputGrad, Layer, Optimizer, Update},
+    nn::{optimizer::DynOptimizer, Backward, DynLayer, Forward, InputGrad},
     tensor::Tensor,
 };
+
+use super::DynGrad;
 pub struct LeakyReLU<const INPUT_DIMENSIONS: usize> {
     input: Option<Tensor<INPUT_DIMENSIONS>>,
     negative_slope: f32,
@@ -57,8 +59,8 @@ pub struct LeakyReLUGrad<const INPUT_DIMENSIONS: usize> {
 impl<const INPUT_DIMENSIONS: usize> InputGrad<INPUT_DIMENSIONS>
     for LeakyReLUGrad<INPUT_DIMENSIONS>
 {
-    fn input(&self) -> &Tensor<INPUT_DIMENSIONS> {
-        &self.input
+    fn input(&self) -> Tensor<INPUT_DIMENSIONS> {
+        self.input.clone()
     }
 }
 
@@ -78,14 +80,14 @@ impl<const INPUT_DIMENSIONS: usize> Backward<INPUT_DIMENSIONS, INPUT_DIMENSIONS>
     }
 }
 
-impl<const INPUT_DIMENSIONS: usize> Update for LeakyReLU<INPUT_DIMENSIONS> {
-    type Grad = LeakyReLUGrad<INPUT_DIMENSIONS>;
-    fn update(self, _optimizer: &mut impl Optimizer, _grad: Self::Grad) -> Self {
-        self
+impl DynLayer for LeakyReLU<2> {
+    fn forward(&mut self, input: &Tensor<2>) -> Tensor<2> {
+        Forward::forward(self, input)
     }
-}
 
-impl<const INPUT_DIMENSIONS: usize> Layer<INPUT_DIMENSIONS, INPUT_DIMENSIONS>
-    for LeakyReLU<INPUT_DIMENSIONS>
-{
+    fn backward(&self, next_grad: &Tensor<2>) -> DynGrad {
+        DynGrad::LeakyReLU(Backward::backward(self, next_grad))
+    }
+
+    fn update(&mut self, _optimizer: &mut DynOptimizer, _grad: &DynGrad) {}
 }

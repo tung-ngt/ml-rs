@@ -1,7 +1,7 @@
-use ml_rs::{
-    examples::{logic_gate, simple_cnn::train},
-    nn::{Layer, Update},
-    random::{pcg::PCG, RandomGenerator},
+use ml_rs::examples::{
+    //logic_gate,
+    dynamic_simple_cnn::train,
+    //simple_cnn::train
 };
 
 fn main() {

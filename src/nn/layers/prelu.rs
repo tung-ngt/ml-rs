@@ -1,7 +1,9 @@
 use crate::{
-    nn::{Backward, Forward, InputGrad, Layer, Optimizer, Update},
+    nn::{optimizer::DynOptimizer, Backward, DynLayer, Forward, InputGrad, Optimizer, Update},
     tensor::Tensor,
 };
+
+use super::DynGrad;
 pub struct PReLU<const INPUT_DIMENSIONS: usize> {
     input: Option<Tensor<INPUT_DIMENSIONS>>,
     negative_slope: Tensor<1>,
@@ -64,8 +66,8 @@ pub struct PReLUGrad<const INPUT_DIMENSIONS: usize> {
 }
 
 impl<const INPUT_DIMENSIONS: usize> InputGrad<INPUT_DIMENSIONS> for PReLUGrad<INPUT_DIMENSIONS> {
-    fn input(&self) -> &Tensor<INPUT_DIMENSIONS> {
-        &self.input
+    fn input(&self) -> Tensor<INPUT_DIMENSIONS> {
+        self.input.clone()
     }
 }
 
@@ -88,13 +90,25 @@ impl<const INPUT_DIMENSIONS: usize> Backward<INPUT_DIMENSIONS, INPUT_DIMENSIONS>
 
 impl<const INPUT_DIMENSIONS: usize> Update for PReLU<INPUT_DIMENSIONS> {
     type Grad = PReLUGrad<INPUT_DIMENSIONS>;
-    fn update(mut self, optimizer: &mut impl Optimizer, grad: Self::Grad) -> Self {
+    fn update(&mut self, optimizer: &mut impl Optimizer, grad: &Self::Grad) {
         optimizer.step(&mut self.negative_slope, &grad.negative_slope);
-        self
     }
 }
 
-impl<const INPUT_DIMENSIONS: usize> Layer<INPUT_DIMENSIONS, INPUT_DIMENSIONS>
-    for PReLU<INPUT_DIMENSIONS>
-{
+impl DynLayer for PReLU<2> {
+    fn forward(&mut self, input: &Tensor<2>) -> Tensor<2> {
+        Forward::forward(self, input)
+    }
+
+    fn backward(&self, next_grad: &Tensor<2>) -> DynGrad {
+        DynGrad::PReLU(Backward::backward(self, next_grad))
+    }
+
+    fn update(&mut self, optimizer: &mut DynOptimizer, grad: &DynGrad) {
+        let DynGrad::PReLU(grad) = grad else {
+            return;
+        };
+
+        optimizer.step(&mut self.negative_slope, &grad.negative_slope);
+    }
 }

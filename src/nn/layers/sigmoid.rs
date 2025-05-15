@@ -1,5 +1,8 @@
-use crate::nn::{Backward, Forward, InputGrad, Layer, Optimizer, Update};
+use crate::nn::optimizer::DynOptimizer;
+use crate::nn::{Backward, DynLayer, Forward, InputGrad};
 use crate::tensor::Tensor;
+
+use super::DynGrad;
 
 pub struct Sigmoid<const INPUT_DIMENSIONS: usize> {
     input_sig: Option<Tensor<INPUT_DIMENSIONS>>,
@@ -32,8 +35,8 @@ pub struct SigmoidGrad<const INPUT_DIMENSIONS: usize> {
 }
 
 impl<const INPUT_DIMENSIONS: usize> InputGrad<INPUT_DIMENSIONS> for SigmoidGrad<INPUT_DIMENSIONS> {
-    fn input(&self) -> &Tensor<INPUT_DIMENSIONS> {
-        &self.input
+    fn input(&self) -> Tensor<INPUT_DIMENSIONS> {
+        self.input.clone()
     }
 }
 
@@ -47,15 +50,14 @@ impl<const INPUT_DIMENSIONS: usize> Backward<INPUT_DIMENSIONS, INPUT_DIMENSIONS>
         Self::Grad { input }
     }
 }
-
-impl<const INPUT_DIMENSIONS: usize> Update for Sigmoid<INPUT_DIMENSIONS> {
-    type Grad = SigmoidGrad<INPUT_DIMENSIONS>;
-    fn update(self, _optimizer: &mut impl Optimizer, _grad: Self::Grad) -> Self {
-        self
+impl DynLayer for Sigmoid<2> {
+    fn forward(&mut self, input: &Tensor<2>) -> Tensor<2> {
+        Forward::forward(self, input)
     }
-}
 
-impl<const INPUT_DIMENSIONS: usize> Layer<INPUT_DIMENSIONS, INPUT_DIMENSIONS>
-    for Sigmoid<INPUT_DIMENSIONS>
-{
+    fn backward(&self, next_grad: &Tensor<2>) -> DynGrad {
+        DynGrad::Sigmoid(Backward::backward(self, next_grad))
+    }
+
+    fn update(&mut self, _optimizer: &mut DynOptimizer, _grad: &DynGrad) {}
 }

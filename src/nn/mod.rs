@@ -1,6 +1,9 @@
+pub mod dynamic_layer;
 pub mod layers;
 pub mod loss;
 pub mod optimizer;
+
+pub use dynamic_layer::DynLayer;
 
 use crate::tensor::Tensor;
 
@@ -9,7 +12,7 @@ pub trait Forward<const INPUT_DIMENSIONS: usize, const OUTPUT_DIMENSIONS: usize>
 }
 
 pub trait InputGrad<const INPUT_DIMENSIONS: usize> {
-    fn input(&self) -> &Tensor<INPUT_DIMENSIONS>;
+    fn input(&self) -> Tensor<INPUT_DIMENSIONS>;
 }
 
 pub trait Backward<const INPUT_DIMENSIONS: usize, const OUTPUT_DIMENSIONS: usize> {
@@ -19,14 +22,7 @@ pub trait Backward<const INPUT_DIMENSIONS: usize, const OUTPUT_DIMENSIONS: usize
 
 pub trait Update {
     type Grad;
-    fn update(self, optimizer: &mut impl Optimizer, grad: Self::Grad) -> Self;
-}
-
-pub trait Layer<const INPUT_DIMENSIONS: usize, const OUTPUT_DIMENSIONS: usize>:
-    Forward<INPUT_DIMENSIONS, OUTPUT_DIMENSIONS>
-    + Backward<INPUT_DIMENSIONS, OUTPUT_DIMENSIONS>
-    + Update
-{
+    fn update(&mut self, optimizer: &mut impl Optimizer, grad: &Self::Grad);
 }
 
 pub trait Optimizer {
