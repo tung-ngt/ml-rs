@@ -1,5 +1,32 @@
 use super::Tensor;
 
+pub fn conv_output_shape(
+    images_size: &[usize; 4],
+    kernels_size: &[usize; 4],
+    strides: (usize, usize),
+) -> [usize; 4] {
+    let &[b, h, w, _c_in] = images_size;
+    let &[c_out, k_h, k_w, _] = kernels_size;
+    let new_h = (h - k_h) / strides.0 + 1;
+    let new_w = (w - k_w) / strides.1 + 1;
+    [b, new_w, new_h, c_out]
+}
+
+pub fn conv_unused_inputs(
+    image_size: (usize, usize),
+    kernel_size: (usize, usize),
+    strides: (usize, usize),
+) -> (usize, usize) {
+    let [_, h_out, w_out, _] = conv_output_shape(
+        &[1, image_size.0, image_size.1, 1],
+        &[1, kernel_size.0, kernel_size.1, 1],
+        strides,
+    );
+    let unused_h = image_size.0 - (h_out - 1) * strides.0 - kernel_size.0;
+    let unused_w = image_size.1 - (w_out - 1) * strides.1 - kernel_size.1;
+    (unused_h, unused_w)
+}
+
 impl Tensor<4> {
     /// Apply 2D convolution on a matrix
     /// Note that this function actually just do cross correlation
@@ -18,9 +45,8 @@ impl Tensor<4> {
             strides
         );
 
-        let &[C_out, H_k, W_k, C] = kernels.shape();
-
-        let &[B, H, W, C_in] = self.shape();
+        let &[_, H_k, W_k, C] = kernels.shape();
+        let &[_, _, _, C_in] = self.shape();
         assert!(
             C_in == C,
             "Image and kernel channels do not match image channels: {}, kernel channels: {}",
@@ -28,9 +54,8 @@ impl Tensor<4> {
             C
         );
 
-        let H_out = (H - H_k) / strides.0 + 1;
-        let W_out = (W - W_k) / strides.1 + 1;
-        let out_shape = [B, H_out, W_out, C_out];
+        let out_shape = conv_output_shape(self.shape(), kernels.shape(), strides);
+        let [B, H_out, W_out, C_out] = out_shape;
 
         let mut data = Vec::with_capacity(out_shape.iter().product());
 
@@ -64,7 +89,7 @@ impl Tensor<4> {
 }
 
 #[cfg(test)]
-mod conv {
+mod conv_tests {
     use crate::tensor;
     use crate::tensor::{
         pad::{pad2d_same_size, PaddingType},

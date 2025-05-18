@@ -1,8 +1,8 @@
 use crate::{
     nn::{optimizer::DynOptimizer, Backward, DynLayer, Forward, InputGrad, Optimizer, Update},
     tensor::{
+        conv::{conv_output_shape, conv_unused_inputs},
         pad::{pad2d_full_size, PaddingSize, PaddingType},
-        utils::{conv_output_size, conv_unused_inputs},
         Tensor,
     },
 };
@@ -158,7 +158,7 @@ impl DynLayer for Conv2D {
             .input_shape
             .as_ref()
             .expect("must give image shape for dyn conv backward");
-        let output_shape = conv_output_size(image_shape, self.weights.shape(), self.strides);
+        let output_shape = conv_output_shape(image_shape, self.weights.shape(), self.strides);
         let next_grad = next_grad.reshape(&output_shape);
         DynGrad::Conv2D(Backward::backward(self, &next_grad))
     }

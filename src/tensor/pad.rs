@@ -90,7 +90,7 @@ impl Tensor<4> {
 }
 
 #[cfg(test)]
-mod pad {
+mod pad_tests {
     use super::PaddingSize;
     use crate::tensor;
     use crate::tensor::Tensor;

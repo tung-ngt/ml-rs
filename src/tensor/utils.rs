@@ -89,19 +89,6 @@ impl fmt::Display for Tensor<3> {
     }
 }
 
-pub fn conv_output_size(
-    images_size: &[usize; 4],
-    kernels_size: &[usize; 4],
-    strides: (usize, usize),
-) -> [usize; 4] {
-    let &[b, h, w, _c_in] = images_size;
-
-    let &[c_out, k_h, k_w, _] = kernels_size;
-    let new_h = (h - k_h) / strides.0 + 1;
-    let new_w = (w - k_w) / strides.1 + 1;
-    [b, new_w, new_h, c_out]
-}
-
 pub fn pooling_output_size(
     image_size: &[usize; 4],
     kernel_size: (usize, usize),
@@ -134,22 +121,6 @@ pub fn flatten_output_shape<const INPUT_DIMENSIONS: usize, const OUTPUT_DIMENSIO
         new_shape[n] *= *s;
     }
     new_shape
-}
-
-pub fn conv_unused_inputs(
-    image_size: (usize, usize),
-    kernel_size: (usize, usize),
-    strides: (usize, usize),
-) -> (usize, usize) {
-    let [_, h_out, w_out, _] = conv_output_size(
-        &[1, image_size.0, image_size.1, 1],
-        &[1, kernel_size.0, kernel_size.1, 1],
-        strides,
-    );
-    let unused_h = image_size.0 - (h_out - 1) * strides.0 - kernel_size.0;
-    let unused_w = image_size.1 - (w_out - 1) * strides.1 - kernel_size.1;
-
-    (unused_h, unused_w)
 }
 
 #[cfg(test)]
