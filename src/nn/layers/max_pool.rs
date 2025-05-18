@@ -185,7 +185,7 @@ mod max_pool_layer {
     }
 
     #[test]
-    fn backward_over() {
+    fn misalign() {
         let a = tensor!(1, 4, 5, 1 => [
             1.0, 2.0, 5.0, 3.0, 10.0,
             3.0, 4.0, 2.0, 1.0, 10.0,

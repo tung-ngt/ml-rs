@@ -216,7 +216,7 @@ mod conv_layer_tests {
     }
 
     #[test]
-    fn forward_backward_over() {
+    fn misalign() {
         let a = Tensor::<4>::filled(&[1, 5, 5, 1], 1.0);
         let kernel = tensor!(1, 3, 3, 1 => [
             1.0, 1.0, 1.0,
