@@ -1,5 +1,17 @@
 use super::Tensor;
 
+pub fn pooling_output_shape(
+    image_size: &[usize; 4],
+    kernel_size: (usize, usize),
+    strides: (usize, usize),
+    dilation: (usize, usize),
+) -> [usize; 4] {
+    let &[b, h, w, c] = image_size;
+    let h_out = (h - dilation.0 * (kernel_size.0 - 1) - 1) / strides.0 + 1;
+    let w_out = (w - dilation.1 * (kernel_size.1 - 1) - 1) / strides.1 + 1;
+    [b, h_out, w_out, c]
+}
+
 impl Tensor<4> {
     #[allow(non_snake_case)]
     pub fn max_pool2d(

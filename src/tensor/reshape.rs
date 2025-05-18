@@ -1,4 +1,26 @@
-use super::{utils::flatten_output_shape, Tensor};
+use super::Tensor;
+
+pub fn flatten_output_shape<const INPUT_DIMENSIONS: usize, const OUTPUT_DIMENSIONS: usize>(
+    input_shape: &[usize; INPUT_DIMENSIONS],
+    start: Option<usize>,
+    stop: Option<usize>,
+) -> [usize; OUTPUT_DIMENSIONS] {
+    let mut new_shape = [1; OUTPUT_DIMENSIONS];
+
+    let start = start.unwrap_or(0);
+    let stop = stop.unwrap_or(INPUT_DIMENSIONS);
+
+    let flatten_dims = start..stop;
+
+    let mut n = OUTPUT_DIMENSIONS;
+    for (i, s) in input_shape.iter().enumerate().rev() {
+        if !flatten_dims.contains(&i) || i == INPUT_DIMENSIONS - 1 {
+            n -= 1;
+        }
+        new_shape[n] *= *s;
+    }
+    new_shape
+}
 
 impl<const INPUT_DIMENSIONS: usize> Tensor<INPUT_DIMENSIONS> {
     pub fn flatten<const OUTPUT_DIMENSIONS: usize>(

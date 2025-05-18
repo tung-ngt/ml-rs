@@ -1,6 +1,6 @@
 use crate::{
     nn::{optimizer::DynOptimizer, Backward, DynLayer, Forward, InputGrad},
-    tensor::{utils::pooling_output_size, Tensor},
+    tensor::{pooling::pooling_output_shape, Tensor},
 };
 
 use super::DynGrad;
@@ -120,7 +120,7 @@ impl DynLayer for MaxPool2D {
             .as_ref()
             .expect("must give image shape for dyn max pool backward");
         let output_shape =
-            pooling_output_size(input_shape, self.kernel_size, self.strides, self.dilations);
+            pooling_output_shape(input_shape, self.kernel_size, self.strides, self.dilations);
         let next_grad = next_grad.reshape(&output_shape);
         DynGrad::MaxPool2D(Backward::backward(self, &next_grad))
     }
