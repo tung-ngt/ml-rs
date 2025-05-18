@@ -19,14 +19,6 @@ impl Tensor<4> {
         );
 
         let &[C_out, H_k, W_k, C] = kernels.shape();
-        assert!(
-            H_k % 2 == 1 && W_k % 2 == 1,
-            "We dont support even kernal shape, {}x{}x{}x{}",
-            C_out,
-            H_k,
-            W_k,
-            C
-        );
 
         let &[B, H, W, C_in] = self.shape();
         assert!(
