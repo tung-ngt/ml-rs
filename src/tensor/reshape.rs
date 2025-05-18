@@ -51,7 +51,7 @@ mod reshape_test {
             16.0, 17.0, 18.0
         ]);
 
-        let b: Tensor<2> = a.flatten(0..1);
+        let b: Tensor<2> = a.flatten(None, Some(1));
         let c = tensor!(6, 3 => [
             1.0, 2.0, 3.0,
             4.0, 5.0, 6.0,
@@ -63,7 +63,7 @@ mod reshape_test {
         ]);
         assert!(b == c);
 
-        let b: Tensor<2> = a.flatten(1..2);
+        let b: Tensor<2> = a.flatten(Some(1), Some(2));
         let c = tensor!(2, 9 => [
             1.0, 2.0, 3.0,
             4.0, 5.0, 6.0,
@@ -75,7 +75,7 @@ mod reshape_test {
         ]);
         assert!(b == c);
 
-        let b: Tensor<1> = a.flatten(..);
+        let b: Tensor<1> = a.flatten(None, None);
         let c = tensor!(18 => [
             1.0, 2.0, 3.0,
             4.0, 5.0, 6.0,
