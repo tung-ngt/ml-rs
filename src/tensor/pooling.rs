@@ -6,11 +6,11 @@ impl Tensor<4> {
         &self,
         kernel_size: (usize, usize),
         strides: (usize, usize),
-        dilation: (usize, usize),
+        dilations: (usize, usize),
     ) -> (Tensor<4>, Tensor<4>) {
         let &[B, H, W, C_in] = self.shape();
-        let H_out = (H - dilation.0 * (kernel_size.0 - 1) - 1) / strides.0 + 1;
-        let W_out = (W - dilation.1 * (kernel_size.1 - 1) - 1) / strides.1 + 1;
+        let H_out = (H - dilations.0 * (kernel_size.0 - 1) - 1) / strides.0 + 1;
+        let W_out = (W - dilations.1 * (kernel_size.1 - 1) - 1) / strides.1 + 1;
         let out_shape = [B, H_out, W_out, C_in];
         let data_strides = Self::get_strides(&out_shape);
         let no_elements = out_shape.iter().product();
@@ -27,8 +27,8 @@ impl Tensor<4> {
 
                         for h_k in 0..kernel_size.0 {
                             for w_k in 0..kernel_size.1 {
-                                let i = h_out * strides.0 + h_k * dilation.0;
-                                let j = w_out * strides.1 + w_k * dilation.1;
+                                let i = h_out * strides.0 + h_k * dilations.0;
+                                let j = w_out * strides.1 + w_k * dilations.1;
                                 let x = self[&[b, i, j, c]];
 
                                 if x > max {
