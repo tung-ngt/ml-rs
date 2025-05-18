@@ -1,4 +1,4 @@
-use super::{conv::PaddingSize, Tensor};
+use super::Tensor;
 use std::fmt;
 
 fn print_matrix(matrix: &Tensor<2>, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -87,35 +87,6 @@ impl fmt::Display for Tensor<3> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         print_tensor3(self, f)
     }
-}
-
-pub fn pad2d_same_size(
-    image_size: (usize, usize),
-    kernel_size: (usize, usize),
-    strides: (usize, usize),
-) -> (PaddingSize, PaddingSize) {
-    let height_padding = image_size.0 * (strides.0 - 1) + kernel_size.0 - strides.0;
-    let height_padding = if height_padding % 2 == 0 {
-        PaddingSize::Same(height_padding / 2)
-    } else {
-        PaddingSize::Diff(height_padding / 2, height_padding / 2 + 1)
-    };
-
-    let width_padding = image_size.1 * (strides.1 - 1) + kernel_size.1 - strides.1;
-    let width_padding = if width_padding % 2 == 0 {
-        PaddingSize::Same(width_padding / 2)
-    } else {
-        PaddingSize::Diff(width_padding / 2, width_padding / 2 + 1)
-    };
-
-    (height_padding, width_padding)
-}
-
-pub fn pad2d_full_size(kernel_size: (usize, usize)) -> (PaddingSize, PaddingSize) {
-    let height_padding = PaddingSize::Same(kernel_size.0 - 1);
-    let width_padding = PaddingSize::Same(kernel_size.1 - 1);
-
-    (height_padding, width_padding)
 }
 
 pub fn conv_output_size(

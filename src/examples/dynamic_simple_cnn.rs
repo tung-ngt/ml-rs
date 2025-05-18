@@ -6,7 +6,7 @@ use crate::{
         DynLayer, Loss,
     },
     tensor,
-    tensor::{conv::PaddingType, utils::pad2d_same_size},
+    tensor::pad::{pad2d_same_size, PaddingType},
 };
 
 pub fn train() {

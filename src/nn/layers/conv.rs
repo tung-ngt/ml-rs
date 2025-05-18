@@ -1,8 +1,8 @@
 use crate::{
     nn::{optimizer::DynOptimizer, Backward, DynLayer, Forward, InputGrad, Optimizer, Update},
     tensor::{
-        conv::{PaddingSize, PaddingType},
-        utils::{conv_output_size, conv_unused_inputs, pad2d_full_size},
+        pad::{pad2d_full_size, PaddingSize, PaddingType},
+        utils::{conv_output_size, conv_unused_inputs},
         Tensor,
     },
 };
@@ -178,8 +178,7 @@ mod conv_layer_tests {
     use crate::nn::layers::conv::{Conv2D, Conv2DGrad};
     use crate::nn::{Backward, Forward};
     use crate::tensor;
-    use crate::tensor::conv::PaddingType;
-    use crate::tensor::utils::pad2d_same_size;
+    use crate::tensor::pad::{pad2d_same_size, PaddingType};
     use crate::tensor::Tensor;
 
     #[test]

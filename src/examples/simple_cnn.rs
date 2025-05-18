@@ -9,7 +9,10 @@ use crate::{
         Backward, Forward, InputGrad, Loss, Optimizer, Update,
     },
     tensor,
-    tensor::{conv::PaddingType, utils::pad2d_same_size, Tensor},
+    tensor::{
+        pad::{pad2d_same_size, PaddingType},
+        Tensor,
+    },
 };
 
 struct Model {

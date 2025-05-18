@@ -1,6 +1,7 @@
 pub mod conv;
 pub mod macros;
 pub mod math_ops;
+pub mod pad;
 pub mod pooling;
 pub mod reshape;
 pub mod reverse;
