@@ -146,6 +146,18 @@ pub fn conv_output_size(
     [b, new_w, new_h, c_out]
 }
 
+pub fn pooling_output_size(
+    image_size: &[usize; 4],
+    kernel_size: (usize, usize),
+    strides: (usize, usize),
+    dilation: (usize, usize),
+) -> [usize; 4] {
+    let &[b, h, w, c] = image_size;
+    let h_out = (h - dilation.0 * (kernel_size.0 - 1) - 1) / strides.0 + 1;
+    let w_out = (w - dilation.1 * (kernel_size.1 - 1) - 1) / strides.1 + 1;
+    [b, h_out, w_out, c]
+}
+
 pub fn flatten_output_shape<const INPUT_DIMENSIONS: usize, const OUTPUT_DIMENSIONS: usize>(
     input_shape: &[usize; INPUT_DIMENSIONS],
     start: Option<usize>,

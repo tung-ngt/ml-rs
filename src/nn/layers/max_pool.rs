@@ -1,7 +1,9 @@
 use crate::{
-    nn::{Backward, Forward, InputGrad},
-    tensor::Tensor,
+    nn::{optimizer::DynOptimizer, Backward, DynLayer, Forward, InputGrad},
+    tensor::{utils::pooling_output_size, Tensor},
 };
+
+use super::DynGrad;
 
 pub struct MaxPool2D {
     input_shape: Option<[usize; 4]>,
@@ -25,13 +27,30 @@ impl MaxPool2D {
             dilations,
         }
     }
+
+    pub fn with_shape(
+        input_shape: &[usize; 4],
+        kernel_size: (usize, usize),
+        strides: (usize, usize),
+        dilations: (usize, usize),
+    ) -> Self {
+        Self {
+            input_shape: Some(*input_shape),
+            indicies: None,
+            kernel_size,
+            strides,
+            dilations,
+        }
+    }
 }
 
 impl Forward<4, 4> for MaxPool2D {
     fn forward(&mut self, input: &Tensor<4>) -> Tensor<4> {
         let (x, i) = input.max_pool2d(self.kernel_size, self.strides, self.dilations);
         self.indicies = Some(i);
-        self.input_shape = Some(*input.shape());
+        if self.input_shape.is_none() {
+            self.input_shape = Some(*input.shape());
+        }
         x
     }
 }
@@ -84,9 +103,35 @@ impl Backward<4, 4> for MaxPool2D {
     }
 }
 
+impl DynLayer for MaxPool2D {
+    fn forward(&mut self, input: &Tensor<2>) -> Tensor<2> {
+        let input = input.reshape(
+            self.input_shape
+                .as_ref()
+                .expect("must give image shape for dyn max pool forward"),
+        );
+
+        Forward::forward(self, &input).flatten(Some(1), None)
+    }
+
+    fn backward(&self, next_grad: &Tensor<2>) -> DynGrad {
+        let input_shape = self
+            .input_shape
+            .as_ref()
+            .expect("must give image shape for dyn max pool backward");
+        let output_shape =
+            pooling_output_size(input_shape, self.kernel_size, self.strides, self.dilations);
+        let next_grad = next_grad.reshape(&output_shape);
+        DynGrad::MaxPool2D(Backward::backward(self, &next_grad))
+    }
+
+    fn update(&mut self, _optimizer: &mut DynOptimizer, _grad: &DynGrad) {}
+}
+
 #[cfg(test)]
 mod max_pool_layer {
-    use super::*;
+    use super::MaxPool2D;
+    use crate::nn::{Backward, Forward};
     use crate::tensor;
 
     #[test]
