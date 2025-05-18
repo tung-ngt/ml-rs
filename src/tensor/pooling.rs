@@ -79,4 +79,29 @@ mod pooling_tests {
         assert!(c == b);
         assert!(idx == indices);
     }
+
+    #[test]
+    fn max_pool_over() {
+        let a = tensor!(1, 4, 5, 1 => [
+            1.0, 2.0, 5.0, 3.0, 10.0,
+            3.0, 4.0, 2.0, 1.0, 10.0,
+            3.0, 2.0, 3.0, 7.0, 10.0,
+            6.0, 1.0, 2.0, 1.0, 10.0
+        ]);
+
+        let b = tensor!(1, 2, 2, 1 => [
+            4.0, 5.0,
+            6.0, 7.0
+        ]);
+
+        let idx = tensor!(1, 2, 2, 1 => [
+            3.0, 0.0,
+            2.0, 1.0
+        ]);
+
+        let (c, indices) = a.max_pool2d((2, 2), (2, 2), (1, 1));
+
+        assert!(c == b);
+        assert!(idx == indices);
+    }
 }
