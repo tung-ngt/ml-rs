@@ -2,7 +2,7 @@ pub mod conv;
 pub mod flatten;
 pub mod leaky_relu;
 pub mod linear;
-pub mod pooling;
+pub mod max_pool;
 pub mod prelu;
 pub mod relu;
 pub mod sigmoid;
