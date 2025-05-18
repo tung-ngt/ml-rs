@@ -8,6 +8,7 @@ pub mod reshape;
 pub mod reverse;
 pub mod stack;
 pub mod subtensor;
+pub mod upsample;
 
 pub mod tensor_struct;
 
