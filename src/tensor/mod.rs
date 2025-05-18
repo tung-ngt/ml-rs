@@ -1,4 +1,5 @@
 pub mod conv;
+pub mod display;
 pub mod macros;
 pub mod math_ops;
 pub mod pad;
@@ -7,7 +8,6 @@ pub mod reshape;
 pub mod reverse;
 pub mod stack;
 pub mod subtensor;
-pub mod utils;
 
 pub mod tensor_struct;
 
