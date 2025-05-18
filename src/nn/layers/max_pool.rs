@@ -63,22 +63,12 @@ impl Backward<4, 4> for MaxPool2D {
                     for c in 0..C {
                         let idx = indicies[&[b, h_out, w_out, c]];
                         let grad = next_grad[&[b, h_out, w_out, c]];
-                        println!("grad {}", grad);
-                        println!("idx {}", idx);
 
                         let sub_i = (idx as usize) / self.kernel_size.0;
                         let sub_j = (idx as usize) - sub_i * self.kernel_size.0;
-                        println!("sub_i {}", sub_i);
-                        println!("sub_j {}", sub_j);
 
                         let i = h_out * self.strides.0 + sub_i * self.dilations.0;
                         let j = w_out * self.strides.1 + sub_j * self.dilations.1;
-                        println!("i {}", i);
-                        println!("j {}", j);
-                        println!(
-                            "flatten {}",
-                            b * input_strides[0] + i * input_strides[1] + j * input_strides[2] + c
-                        );
                         data[b * input_strides[0]
                             + i * input_strides[1]
                             + j * input_strides[2]
@@ -176,5 +166,61 @@ mod max_pool_layer {
         let grad = pool.backward(&next_grad);
 
         assert!(expected_input_grad == grad.input);
+    }
+
+    #[test]
+    fn forward_overlap() {
+        let a = tensor!(1, 4, 4, 1 => [
+            1.0, 2.0, 5.0, 3.0,
+            3.0, 4.0, 2.0, 1.0,
+            3.0, 2.0, 3.0, 7.0,
+            6.0, 1.0, 2.0, 1.0
+        ]);
+
+        let b = tensor!(1, 3, 3, 1 => [
+            4.0, 5.0, 5.0,
+            4.0, 4.0, 7.0,
+            6.0, 3.0, 7.0
+        ]);
+
+        let mut pool = MaxPool2D::new((2, 2), (1, 1), (1, 1));
+
+        let c = pool.forward(&a);
+
+        assert!(c == b);
+    }
+
+    #[test]
+    fn backward_overlap() {
+        let a = tensor!(1, 4, 4, 1 => [
+            1.0, 2.0, 5.0, 3.0,
+            3.0, 4.0, 2.0, 1.0,
+            3.0, 2.0, 3.0, 7.0,
+            6.0, 1.0, 2.0, 1.0
+        ]);
+
+        let next_grad = tensor!(1, 3, 3, 1 => [
+            1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0
+        ]);
+
+        let expected_input_grad = tensor!(1, 4, 4, 1 => [
+            0.0, 0.0, 2.0, 0.0,
+            0.0, 3.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, 2.0,
+            1.0, 0.0, 0.0, 0.0
+        ]);
+
+        let mut pool = MaxPool2D::new((2, 2), (1, 1), (1, 1));
+
+        let _ = pool.forward(&a);
+        let grad = pool.backward(&next_grad);
+
+        assert!(
+            expected_input_grad == grad.input,
+            "{}",
+            grad.input.subtensor(&[0..1, 0..4, 0..4, 0..1]).squeeze(0)
+        );
     }
 }

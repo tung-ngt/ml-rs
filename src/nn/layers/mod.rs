@@ -12,6 +12,7 @@ use conv::Conv2DGrad;
 use flatten::FlattenGrad;
 use leaky_relu::LeakyReLUGrad;
 use linear::LinearGrad;
+use max_pool::MaxPool2DGrad;
 use prelu::PReLUGrad;
 use relu::ReLUGrad;
 use sigmoid::SigmoidGrad;
@@ -30,12 +31,14 @@ pub enum DynGrad {
     ReLU(ReLUGrad<2>),
     Sigmoid(SigmoidGrad<2>),
     Stack(StackGrad),
+    MaxPool2D(MaxPool2DGrad),
 }
 
 impl DynGrad {
     pub fn input(&self) -> Tensor<2> {
         match self {
             Self::Conv2D(g) => g.input().flatten(Some(1), None),
+            Self::MaxPool2D(g) => g.input().flatten(Some(1), None),
             Self::Linear(g) => g.input().clone(),
             Self::Flatten(g) => g.input().clone(),
             Self::LeakyReLU(g) => g.input().clone(),
