@@ -111,24 +111,9 @@ pub fn pad2d_same_size(
     (height_padding, width_padding)
 }
 
-pub fn pad2d_full_size(
-    image_size: (usize, usize),
-    kernel_size: (usize, usize),
-    strides: (usize, usize),
-) -> (PaddingSize, PaddingSize) {
-    let height_padding = image_size.0 * (strides.0 - 1) + kernel_size.0 - strides.0;
-    let height_padding = if height_padding % 2 == 0 {
-        PaddingSize::Same(height_padding / 2)
-    } else {
-        PaddingSize::Diff(height_padding / 2, height_padding / 2 + 1)
-    };
-
-    let width_padding = image_size.1 * (strides.1 - 1) + kernel_size.1 - strides.1;
-    let width_padding = if width_padding % 2 == 0 {
-        PaddingSize::Same(width_padding / 2)
-    } else {
-        PaddingSize::Diff(width_padding / 2, width_padding / 2 + 1)
-    };
+pub fn pad2d_full_size(kernel_size: (usize, usize)) -> (PaddingSize, PaddingSize) {
+    let height_padding = PaddingSize::Same(kernel_size.0 - 1);
+    let width_padding = PaddingSize::Same(kernel_size.1 - 1);
 
     (height_padding, width_padding)
 }
@@ -178,6 +163,22 @@ pub fn flatten_output_shape<const INPUT_DIMENSIONS: usize, const OUTPUT_DIMENSIO
         new_shape[n] *= *s;
     }
     new_shape
+}
+
+pub fn conv_unused_inputs(
+    image_size: (usize, usize),
+    kernel_size: (usize, usize),
+    strides: (usize, usize),
+) -> (usize, usize) {
+    let [_, h_out, w_out, _] = conv_output_size(
+        &[1, image_size.0, image_size.1, 1],
+        &[1, kernel_size.0, kernel_size.1, 1],
+        strides,
+    );
+    let unused_h = image_size.0 - (h_out - 1) * strides.0 - kernel_size.0;
+    let unused_w = image_size.1 - (w_out - 1) * strides.1 - kernel_size.1;
+
+    (unused_h, unused_w)
 }
 
 #[cfg(test)]
