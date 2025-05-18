@@ -1,0 +1,160 @@
+use crate::{
+    nn::{Backward, Forward, InputGrad},
+    tensor::Tensor,
+};
+
+pub struct MaxPool2D {
+    input_shape: Option<[usize; 4]>,
+    indicies: Option<Tensor<4>>,
+    kernel_size: (usize, usize),
+    strides: (usize, usize),
+    dilations: (usize, usize),
+}
+
+impl MaxPool2D {
+    pub fn new(
+        kernel_size: (usize, usize),
+        strides: (usize, usize),
+        dilations: (usize, usize),
+    ) -> Self {
+        Self {
+            input_shape: None,
+            indicies: None,
+            kernel_size,
+            strides,
+            dilations,
+        }
+    }
+}
+
+impl Forward<4, 4> for MaxPool2D {
+    fn forward(&mut self, input: &Tensor<4>) -> Tensor<4> {
+        let (x, i) = input.max_pool2d(self.kernel_size, self.strides, self.dilations);
+        self.indicies = Some(i);
+        self.input_shape = Some(*input.shape());
+        x
+    }
+}
+
+pub struct MaxPool2DGrad {
+    input: Tensor<4>,
+}
+
+impl InputGrad<4> for MaxPool2DGrad {
+    fn input(&self) -> Tensor<4> {
+        self.input.clone()
+    }
+}
+
+impl Backward<4, 4> for MaxPool2D {
+    type Grad = MaxPool2DGrad;
+    #[allow(non_snake_case)]
+    fn backward(&self, next_grad: &Tensor<4>) -> Self::Grad {
+        let input_shape = self.input_shape.expect("havent forward");
+        let input_strides = Tensor::get_strides(&input_shape);
+        let indicies = self.indicies.as_ref().expect("havent forward");
+        let mut data = vec![0.0; input_shape.iter().product()];
+
+        let &[B, H_out, W_out, C] = next_grad.shape();
+
+        for b in 0..B {
+            for h_out in 0..H_out {
+                for w_out in 0..W_out {
+                    for c in 0..C {
+                        let idx = indicies[&[b, h_out, w_out, c]];
+                        let grad = next_grad[&[b, h_out, w_out, c]];
+                        println!("grad {}", grad);
+                        println!("idx {}", idx);
+
+                        let sub_i = (idx as usize) / self.kernel_size.0;
+                        let sub_j = (idx as usize) - sub_i * self.kernel_size.0;
+                        println!("sub_i {}", sub_i);
+                        println!("sub_j {}", sub_j);
+
+                        let i = h_out * self.strides.0 + sub_i * self.dilations.0;
+                        let j = w_out * self.strides.1 + sub_j * self.dilations.1;
+                        println!("i {}", i);
+                        println!("j {}", j);
+                        println!(
+                            "flatten {}",
+                            b * input_strides[0] + i * input_strides[1] + j * input_strides[2] + c
+                        );
+                        data[b * input_strides[0]
+                            + i * input_strides[1]
+                            + j * input_strides[2]
+                            + c] += grad;
+                    }
+                }
+            }
+        }
+
+        Self::Grad {
+            input: Tensor::with_data(&input_shape, &input_strides, 0, data.into()),
+        }
+    }
+}
+
+#[cfg(test)]
+mod max_pool_layer {
+    use super::*;
+    use crate::tensor;
+
+    #[test]
+    fn forward() {
+        let a = tensor!(1, 4, 4, 1 => [
+            1.0, 2.0, 5.0, 3.0,
+            3.0, 4.0, 2.0, 1.0,
+            3.0, 2.0, 3.0, 7.0,
+            6.0, 1.0, 2.0, 1.0
+        ]);
+
+        let b = tensor!(1, 2, 2, 1 => [
+            4.0, 5.0,
+            6.0, 7.0
+        ]);
+
+        let mut pool = MaxPool2D::new((2, 2), (2, 2), (1, 1));
+
+        let c = pool.forward(&a);
+
+        assert!(c == b);
+    }
+
+    #[test]
+    fn backward() {
+        let a = tensor!(1, 4, 4, 1 => [
+            1.0, 2.0, 5.0, 3.0,
+            3.0, 4.0, 2.0, 1.0,
+            3.0, 2.0, 3.0, 7.0,
+            6.0, 1.0, 2.0, 1.0
+        ]);
+
+        //let b = tensor!(1, 2, 2, 1 => [
+        //    4.0, 5.0,
+        //    6.0, 7.0
+        //]);
+
+        let next_grad = tensor!(1, 2, 2, 1 => [
+            1.0, 2.0,
+            3.0, 4.0
+        ]);
+
+        let expected_input_grad = tensor!(1, 4, 4, 1 => [
+            0.0, 0.0, 2.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 4.0,
+            3.0, 0.0, 0.0, 0.0
+        ]);
+
+        let mut pool = MaxPool2D::new((2, 2), (2, 2), (1, 1));
+
+        let _ = pool.forward(&a);
+        let grad = pool.backward(&next_grad);
+
+        //println!(
+        //    "{}",
+        //    grad.input.subtensor(&[0..1, 0..4, 0..4, 0..1]).squeeze(0)
+        //);
+        assert!(expected_input_grad == grad.input);
+    }
+}
