@@ -268,4 +268,39 @@ mod max_pool_layer {
             grad.input.subtensor(&[0..1, 0..4, 0..4, 0..1]).squeeze(0)
         );
     }
+
+    #[test]
+    fn dilate() {
+        let a = tensor!(1, 4, 4, 1 => [
+            1.0, 2.0, 5.0, 3.0,
+            3.0, 4.0, 2.0, 1.0,
+            3.0, 2.0, 3.0, 7.0,
+            6.0, 1.0, 2.0, 1.0
+        ]);
+
+        let b = tensor!(1, 2, 2, 1 => [
+            5.0, 7.0,
+            6.0, 4.0
+        ]);
+
+        let next_grad = tensor!(1, 2, 2, 1 => [
+            1.0, 2.0,
+            3.0, 4.0
+        ]);
+
+        let expected_input_grad = tensor!(1, 4, 4, 1 => [
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 4.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 2.0,
+            3.0, 0.0, 0.0, 0.0
+        ]);
+
+        let mut pool = MaxPool2D::new((2, 2), (1, 1), (2, 2));
+
+        let c = pool.forward(&a);
+        assert!(b == c, "expected {}\ngot {}", b.squeeze(0), c.squeeze(0));
+        let grad = pool.backward(&next_grad);
+
+        assert!(expected_input_grad == grad.input);
+    }
 }
