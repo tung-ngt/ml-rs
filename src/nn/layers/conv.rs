@@ -95,6 +95,9 @@ impl Backward<4, 4> for Conv2D {
         let &[_, h_in, w_in, _] = input.shape();
         let &[_, h_k, w_k, _] = self.weights.shape();
 
+        //Dilate the next_grad to accomadate stride > 1
+        let next_grad = next_grad.dilate2d(self.strides);
+
         let input_grad = next_grad
             .pad2d(pad2d_full_size((h_k, w_k)), PaddingType::Zero)
             .conv2d(
@@ -114,6 +117,7 @@ impl Backward<4, 4> for Conv2D {
             PaddingType::Zero,
         );
 
+        println!("input grad {:?}", input_grad.shape());
         //We also have to do the same thing to the next grad to get the correct weight shape
         let pad_next_grad = next_grad.transpose(&[3, 1, 2, 0]).pad2d(
             (
@@ -122,6 +126,8 @@ impl Backward<4, 4> for Conv2D {
             ),
             PaddingType::Zero,
         );
+
+        println!("pad next grad shape {:?}", pad_next_grad.shape());
         let weight_grad = input
             .transpose(&[3, 1, 2, 0])
             .conv2d(&pad_next_grad, (1, 1))
@@ -216,43 +222,58 @@ mod conv_layer_tests {
 
     #[test]
     fn misalign() {
-        let a = Tensor::<4>::filled(&[1, 5, 5, 1], 1.0);
+        let a = Tensor::<4>::filled(&[1, 6, 6, 1], 1.0);
         let kernel = tensor!(1, 3, 3, 1 => [
             1.0, 1.0, 1.0,
             1.0, 1.0, 1.0,
             1.0, 1.0, 1.0
         ]);
 
-        let mut conv = Conv2D::with_kernel(kernel, (4, 4));
+        let mut conv = Conv2D::with_kernel(kernel, (2, 2));
         let b = conv.forward(&a);
 
-        let c = tensor!(1, 1, 1, 1 => [
-            9.0
+        let c = tensor!(1, 2, 2, 1 => [
+            9.0, 9.0,
+            9.0, 9.0
         ]);
 
-        assert!(b == c);
+        assert!(b == c, "expected {:?}\ngot {:?}", c.shape(), b.shape());
 
-        let next_grad = tensor!(1, 1, 1, 1 => [5.0]);
+        let next_grad = tensor!(1, 2, 2, 1 => [
+            1.0, 1.0,
+            1.0, 1.0
+        ]);
         let grad = conv.backward(&next_grad);
 
         let expected_grad = Conv2DGrad {
-            input: tensor!(1, 5, 5, 1 => [
-                5.0, 5.0, 5.0, 0.0, 0.0,
-                5.0, 5.0, 5.0, 0.0, 0.0,
-                5.0, 5.0, 5.0, 0.0, 0.0,
-                0.0, 0.0, 0.0, 0.0, 0.0,
-                0.0, 0.0, 0.0, 0.0, 0.0
+            input: tensor!(1, 6, 6, 1 => [
+                1.0, 1.0, 2.0, 1.0, 1.0, 0.0,
+                1.0, 1.0, 2.0, 1.0, 1.0, 0.0,
+                2.0, 2.0, 4.0, 2.0, 2.0, 0.0,
+                1.0, 1.0, 2.0, 1.0, 1.0, 0.0,
+                1.0, 1.0, 2.0, 1.0, 1.0, 0.0,
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0
             ]),
             weights: tensor!(1, 3, 3, 1 => [
-                5.0, 5.0, 5.0,
-                5.0, 5.0, 5.0,
-                5.0, 5.0, 5.0
+                4.0, 4.0, 4.0,
+                4.0, 4.0, 4.0,
+                4.0, 4.0, 4.0
             ]),
             biases: conv.biases.clone(),
         };
 
-        assert!(grad.input == expected_grad.input,);
-        assert!(grad.weights == expected_grad.weights,);
+        assert!(
+            grad.input == expected_grad.input,
+            "expected {}\ngot{}",
+            expected_grad.input.squeeze(0),
+            grad.input.squeeze(0)
+        );
+        assert!(
+            grad.weights == expected_grad.weights,
+            "epected {}\ngot {}",
+            expected_grad.weights.squeeze(0),
+            grad.weights.squeeze(0)
+        );
         assert!(grad.biases == expected_grad.biases);
     }
 }
