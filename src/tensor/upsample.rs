@@ -1,15 +1,15 @@
 use super::Tensor;
 
-pub fn dilate_output_shape(image_shape: &[usize; 4], dilation: (usize, usize)) -> [usize; 4] {
+pub fn dilate_output_shape(image_shape: &[usize; 4], dilations: (usize, usize)) -> [usize; 4] {
     let &[b, h, w, c] = image_shape;
-    let h_out = dilation.0 * (h - 1) + 1;
-    let w_out = dilation.1 * (w - 1) + 1;
+    let h_out = dilations.0 * (h - 1) + 1;
+    let w_out = dilations.1 * (w - 1) + 1;
     [b, h_out, w_out, c]
 }
 impl Tensor<4> {
     #![allow(non_snake_case)]
-    pub fn dilate2d(&self, dilation: (usize, usize)) -> Tensor<4> {
-        let dilate_shape = dilate_output_shape(self.shape(), dilation);
+    pub fn dilate2d(&self, dilations: (usize, usize)) -> Tensor<4> {
+        let dilate_shape = dilate_output_shape(self.shape(), dilations);
         let dilate_strides = Tensor::get_strides(&dilate_shape);
         let mut data = vec![0.0; dilate_shape.iter().product()];
 
@@ -19,8 +19,8 @@ impl Tensor<4> {
             for h in 0..H {
                 for w in 0..W {
                     for c in 0..C {
-                        let i = h * dilation.0;
-                        let j = w * dilation.1;
+                        let i = h * dilations.0;
+                        let j = w * dilations.1;
 
                         data[b * dilate_strides[0]
                             + i * dilate_strides[1]

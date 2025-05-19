@@ -3,6 +3,7 @@ use crate::{
     tensor::{
         conv::{conv_output_shape, conv_unused_inputs},
         pad::{pad2d_full_size, PaddingSize, PaddingType},
+        upsample::dilate_output_shape,
         Tensor,
     },
 };
@@ -14,6 +15,7 @@ pub struct Conv2D {
     weights: Tensor<4>,
     biases: Tensor<1>,
     strides: (usize, usize),
+    dilations: (usize, usize),
 }
 
 impl Conv2D {
@@ -22,6 +24,7 @@ impl Conv2D {
         c_out: usize,
         kernel_size: (usize, usize),
         strides: (usize, usize),
+        dilations: (usize, usize),
     ) -> Self {
         Self {
             input_shape: None,
@@ -29,6 +32,7 @@ impl Conv2D {
             weights: Tensor::filled(&[c_out, kernel_size.0, kernel_size.1, c_in], 1.0),
             biases: Tensor::vector_filled(4, 1.0),
             strides,
+            dilations,
         }
     }
 
@@ -36,6 +40,7 @@ impl Conv2D {
         image_shape: &[usize; 4],
         kernel_shape: &[usize; 4],
         strides: (usize, usize),
+        dilations: (usize, usize),
     ) -> Self {
         Self {
             input_shape: Some(*image_shape),
@@ -43,16 +48,22 @@ impl Conv2D {
             weights: Tensor::filled(kernel_shape, 1.0),
             biases: Tensor::vector_filled(4, 1.0),
             strides,
+            dilations,
         }
     }
 
-    pub fn with_kernel(kernels: Tensor<4>, strides: (usize, usize)) -> Self {
+    pub fn with_kernel(
+        kernels: Tensor<4>,
+        strides: (usize, usize),
+        dilations: (usize, usize),
+    ) -> Self {
         Self {
             input_shape: None,
             input: None,
             weights: kernels,
             biases: Tensor::vector_filled(4, 1.0),
             strides,
+            dilations,
         }
     }
 
@@ -71,7 +82,7 @@ impl Conv2D {
 impl Forward<4, 4> for Conv2D {
     fn forward(&mut self, input: &Tensor<4>) -> Tensor<4> {
         self.input = Some(input.clone());
-        input.conv2d(&self.weights, self.strides)
+        input.conv2d(&self.weights.dilate2d(self.dilations), self.strides)
     }
 }
 
@@ -93,22 +104,31 @@ impl Backward<4, 4> for Conv2D {
         let input = self.input.as_ref().expect("havent forward");
 
         let &[_, h_in, w_in, _] = input.shape();
-        let &[_, h_k, w_k, _] = self.weights.shape();
+        let [_, effective_h_k, effective_w_k, _] =
+            dilate_output_shape(self.weights.shape(), self.dilations);
 
         //Dilate the next_grad to accomadate stride > 1
         let next_grad = next_grad.dilate2d(self.strides);
 
         let input_grad = next_grad
-            .pad2d(pad2d_full_size((h_k, w_k)), PaddingType::Zero)
+            .pad2d(
+                pad2d_full_size((effective_h_k, effective_w_k)),
+                PaddingType::Zero,
+            )
             .conv2d(
-                &self.weights.transpose(&[3, 1, 2, 0]).reverse(&[1, 2, 3]),
+                &self
+                    .weights
+                    .dilate2d(self.dilations)
+                    .transpose(&[3, 1, 2, 0])
+                    .reverse(&[1, 2, 3]),
                 (1, 1),
             );
 
         //Handle the case where the kernel and stride does not match up with input image.
         //In which case, some right and bottom inputs are not used. Therefore, we pad the
         //grad with 0 for these inputs.
-        let (unused_h, unused_w) = conv_unused_inputs((h_in, w_in), (h_k, w_k), self.strides);
+        let (unused_h, unused_w) =
+            conv_unused_inputs((h_in, w_in), (effective_h_k, effective_w_k), self.strides);
         let input_grad = input_grad.pad2d(
             (
                 PaddingSize::Diff(0, unused_h),
@@ -130,7 +150,7 @@ impl Backward<4, 4> for Conv2D {
         println!("pad next grad shape {:?}", pad_next_grad.shape());
         let weight_grad = input
             .transpose(&[3, 1, 2, 0])
-            .conv2d(&pad_next_grad, (1, 1))
+            .conv2d(&pad_next_grad, self.dilations)
             .transpose(&[3, 1, 2, 0]);
 
         Self::Grad {
@@ -200,7 +220,7 @@ mod conv_layer_tests {
 
         let pad_a = a.pad2d(pad2d_same_size((5, 5), (3, 3), (1, 1)), PaddingType::Zero);
 
-        let mut conv = Conv2D::with_kernel(kernel, (1, 1));
+        let mut conv = Conv2D::with_kernel(kernel, (1, 1), (1, 1));
         let b = conv.forward(&pad_a);
 
         let c = tensor!(2, 5, 5, 1 => [
@@ -229,7 +249,7 @@ mod conv_layer_tests {
             1.0, 1.0, 1.0
         ]);
 
-        let mut conv = Conv2D::with_kernel(kernel, (2, 2));
+        let mut conv = Conv2D::with_kernel(kernel, (2, 2), (1, 1));
         let b = conv.forward(&a);
 
         let c = tensor!(1, 2, 2, 1 => [
@@ -253,6 +273,126 @@ mod conv_layer_tests {
                 1.0, 1.0, 2.0, 1.0, 1.0, 0.0,
                 1.0, 1.0, 2.0, 1.0, 1.0, 0.0,
                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+            ]),
+            weights: tensor!(1, 3, 3, 1 => [
+                4.0, 4.0, 4.0,
+                4.0, 4.0, 4.0,
+                4.0, 4.0, 4.0
+            ]),
+            biases: conv.biases.clone(),
+        };
+
+        assert!(
+            grad.input == expected_grad.input,
+            "expected {}\ngot{}",
+            expected_grad.input.squeeze(0),
+            grad.input.squeeze(0)
+        );
+        assert!(
+            grad.weights == expected_grad.weights,
+            "epected {}\ngot {}",
+            expected_grad.weights.squeeze(0),
+            grad.weights.squeeze(0)
+        );
+        assert!(grad.biases == expected_grad.biases);
+    }
+
+    #[test]
+    fn dilate() {
+        let a = Tensor::<4>::filled(&[1, 9, 9, 1], 1.0);
+        let kernel = tensor!(1, 3, 3, 1 => [
+            1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0
+        ]);
+
+        let mut conv = Conv2D::with_kernel(kernel, (1, 1), (3, 3));
+        let b = conv.forward(&a);
+
+        let c = tensor!(1, 3, 3, 1 => [
+            9.0, 9.0, 9.0,
+            9.0, 9.0, 9.0,
+            9.0, 9.0, 9.0
+        ]);
+
+        assert!(b == c, "expected {:?}\ngot {:?}", c.shape(), b.shape());
+
+        let next_grad = tensor!(1, 3, 3, 1 => [
+            1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0
+        ]);
+        let grad = conv.backward(&next_grad);
+
+        let expected_grad = Conv2DGrad {
+            input: tensor!(1, 9, 9, 1 => [
+                1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+                1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+                1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+                1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+                1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+                1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+                1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+                1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+                1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
+            ]),
+            weights: tensor!(1, 3, 3, 1 => [
+                9.0, 9.0, 9.0,
+                9.0, 9.0, 9.0,
+                9.0, 9.0, 9.0
+            ]),
+            biases: conv.biases.clone(),
+        };
+
+        assert!(
+            grad.input == expected_grad.input,
+            "expected {}\ngot{}",
+            expected_grad.input.squeeze(0),
+            grad.input.squeeze(0)
+        );
+        assert!(
+            grad.weights == expected_grad.weights,
+            "epected {}\ngot {}",
+            expected_grad.weights.squeeze(0),
+            grad.weights.squeeze(0)
+        );
+        assert!(grad.biases == expected_grad.biases);
+    }
+
+    #[test]
+    fn stride_and_dilate() {
+        let a = Tensor::<4>::filled(&[1, 7, 7, 1], 1.0);
+        let kernel = tensor!(1, 3, 3, 1 => [
+            1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0
+        ]);
+
+        let mut conv = Conv2D::with_kernel(kernel, (2, 2), (2, 2));
+        let b = conv.forward(&a);
+
+        let c = tensor!(1, 2, 2, 1 => [
+            9.0, 9.0,
+            9.0, 9.0
+        ]);
+
+        assert!(b == c, "expected {:?}\ngot {:?}", c.shape(), b.shape());
+
+        let next_grad = tensor!(1, 2, 2, 1 => [
+            1.0, 1.0,
+            1.0, 1.0
+        ]);
+        let grad = conv.backward(&next_grad);
+
+        let expected_grad = Conv2DGrad {
+            input: tensor!(1, 7, 7, 1 => [
+                1.0, 0.0, 2.0, 0.0, 2.0, 0.0, 1.0,
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                2.0, 0.0, 4.0, 0.0, 4.0, 0.0, 2.0,
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                2.0, 0.0, 4.0, 0.0, 4.0, 0.0, 2.0,
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                1.0, 0.0, 2.0, 0.0, 2.0, 0.0, 1.0
             ]),
             weights: tensor!(1, 3, 3, 1 => [
                 4.0, 4.0, 4.0,

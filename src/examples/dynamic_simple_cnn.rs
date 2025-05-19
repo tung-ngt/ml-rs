@@ -42,7 +42,12 @@ pub fn train() {
     let data = data.flatten(Some(1), None);
 
     let layers: Vec<Box<dyn DynLayer>> = vec![
-        Box::new(Conv2D::with_shape(&[1, 5, 5, 1], &[2, 3, 3, 1], (1, 1))),
+        Box::new(Conv2D::with_shape(
+            &[1, 5, 5, 1],
+            &[2, 3, 3, 1],
+            (1, 1),
+            (1, 1),
+        )),
         Box::new(Flatten::<4>::new(Some(1), None)),
     ];
     let mut model = Stack::new(layers);

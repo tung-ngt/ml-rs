@@ -28,7 +28,7 @@ impl Model {
         strides: (usize, usize),
     ) -> Self {
         Self {
-            conv: Conv2D::new(c_in, c_out, kernel_size, strides),
+            conv: Conv2D::new(c_in, c_out, kernel_size, strides, (1, 1)),
             flatten: Flatten::new(Some(1), None),
         }
     }
