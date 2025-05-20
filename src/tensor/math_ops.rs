@@ -463,7 +463,7 @@ impl Tensor<2> {
 
         assert!(
             rows == vector_size,
-            "Cannot add row matrix {}x{} with vector ({},)",
+            "Cannot add col matrix {}x{} with vector ({},)",
             rows,
             cols,
             vector_size
@@ -475,6 +475,56 @@ impl Tensor<2> {
         for j in 0..cols {
             for i in 0..rows {
                 new_data[i * stride + j] = matrix[(i, j)] + vector[i];
+            }
+        }
+
+        Tensor::matrix_with_data(rows, cols, &[stride, 1], 0, Arc::from(new_data))
+    }
+
+    pub fn row_mul(&self, vector: &Tensor<1>) -> Tensor<2> {
+        let matrix = self;
+        let &[rows, cols] = matrix.shape();
+        let &[vector_size] = vector.shape();
+
+        assert!(
+            cols == vector_size,
+            "Cannot mul row matrix {}x{} with vector ({},)",
+            rows,
+            cols,
+            vector_size
+        );
+
+        let stride = cols;
+        let mut new_data = vec![0f32; rows * cols];
+
+        for i in 0..rows {
+            for j in 0..cols {
+                new_data[i * stride + j] = matrix[(i, j)] * vector[j];
+            }
+        }
+
+        Tensor::matrix_with_data(rows, cols, &[stride, 1], 0, Arc::from(new_data))
+    }
+
+    pub fn col_mul(&self, vector: &Tensor<1>) -> Tensor<2> {
+        let matrix = self;
+        let &[rows, cols] = matrix.shape();
+        let &[vector_size] = vector.shape();
+
+        assert!(
+            rows == vector_size,
+            "Cannot mul col matrix {}x{} with vector ({},)",
+            rows,
+            cols,
+            vector_size
+        );
+
+        let stride = cols;
+        let mut new_data = vec![0f32; rows * cols];
+
+        for j in 0..cols {
+            for i in 0..rows {
+                new_data[i * stride + j] = matrix[(i, j)] * vector[i];
             }
         }
 
