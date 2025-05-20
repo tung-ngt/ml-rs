@@ -1,11 +1,13 @@
 use super::Tensor;
 
+#[derive(Clone)]
 pub enum PaddingType {
     Zero,
     Const(f32),
     Replicate,
 }
 
+#[derive(Clone)]
 pub enum PaddingSize {
     Same(usize),
     Diff(usize, usize),
@@ -61,7 +63,7 @@ impl Tensor<4> {
             PaddingSize::Diff(t, b) => (t, b),
         };
 
-        let (left, right) = match padding_sizes.0 {
+        let (left, right) = match padding_sizes.1 {
             PaddingSize::Same(p) => (p, p),
             PaddingSize::Diff(l, r) => (l, r),
         };

@@ -3,6 +3,7 @@ pub mod flatten;
 pub mod leaky_relu;
 pub mod linear;
 pub mod max_pool;
+pub mod pad;
 pub mod prelu;
 pub mod relu;
 pub mod sigmoid;
