@@ -7,6 +7,7 @@ pub mod pad;
 pub mod prelu;
 pub mod relu;
 pub mod sigmoid;
+pub mod softmax;
 pub mod stack;
 
 use conv::Conv2DGrad;
