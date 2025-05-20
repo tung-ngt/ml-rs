@@ -41,8 +41,8 @@ impl MSE<reduction::Mean> {
     }
 }
 
-impl Loss for MSE<reduction::Mean> {
-    fn loss_grad<const OUTPUT_DIMENSIONS: usize>(
+impl<const OUTPUT_DIMENSIONS: usize> Loss<OUTPUT_DIMENSIONS> for MSE<reduction::Mean> {
+    fn loss_grad(
         &mut self,
         prediction: Tensor<OUTPUT_DIMENSIONS>,
         target: Tensor<OUTPUT_DIMENSIONS>,
@@ -63,8 +63,8 @@ impl MSE<reduction::Sum> {
     }
 }
 
-impl Loss for MSE<reduction::Sum> {
-    fn loss_grad<const OUTPUT_DIMENSIONS: usize>(
+impl<const OUTPUT_DIMENSIONS: usize> Loss<OUTPUT_DIMENSIONS> for MSE<reduction::Sum> {
+    fn loss_grad(
         &mut self,
         prediction: Tensor<OUTPUT_DIMENSIONS>,
         target: Tensor<OUTPUT_DIMENSIONS>,
@@ -83,8 +83,8 @@ impl MSE<reduction::NoReduction> {
     }
 }
 
-impl Loss for MSE<reduction::NoReduction> {
-    fn loss_grad<const OUTPUT_DIMENSIONS: usize>(
+impl<const OUTPUT_DIMENSIONS: usize> Loss<OUTPUT_DIMENSIONS> for MSE<reduction::NoReduction> {
+    fn loss_grad(
         &mut self,
         prediction: Tensor<OUTPUT_DIMENSIONS>,
         target: Tensor<OUTPUT_DIMENSIONS>,
