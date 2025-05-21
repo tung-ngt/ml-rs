@@ -1,23 +1,18 @@
 use crate::nn::{Backward, Forward, InputGrad};
 use crate::tensor::Tensor;
 
+#[derive(Default)]
 pub struct Softmax {
-    input_sig: Option<Tensor<2>>,
-}
-
-impl Default for Softmax {
-    fn default() -> Self {
-        Self { input_sig: None }
-    }
+    input_softmax: Option<Tensor<2>>,
 }
 
 impl Forward<2, 2> for Softmax {
     fn forward(&mut self, input: &Tensor<2>) -> Tensor<2> {
         let exp = input.apply(|x| x.exp());
-        let sum = 1.0 / &exp.sum_row();
-
+        let sum = exp.sum_col();
+        let sum = 1.0 / &sum;
         let output = exp.col_mul(&sum);
-        self.input_sig = Some(output.clone());
+        self.input_softmax = Some(output.clone());
         output
     }
 }
@@ -35,8 +30,19 @@ impl InputGrad<2> for SoftmaxGrad {
 impl Backward<2, 2> for Softmax {
     type Grad = SoftmaxGrad;
     fn backward(&self, next_grad: &Tensor<2>) -> Self::Grad {
-        let input = self.input_sig.as_ref().expect("havent forward");
-        let input = input.mul_elem(&(1.0 - input)).mul_elem(next_grad);
-        Self::Grad { input }
+        let input_softmax = self.input_softmax.as_ref().expect("havent forward");
+        let &[batch, _no_feature] = input_softmax.shape();
+        let mut grads: Vec<Tensor<1>> = Vec::new();
+        for b in 0..batch {
+            let output = input_softmax.row(b);
+            let output_t = output.t();
+            let diag = output.squeeze(0).diag();
+            let softmax_jacobian = &diag - &(&output_t * &output);
+            let batch_next_grad = next_grad.row(b);
+            let softmax_grad = &batch_next_grad * &softmax_jacobian;
+            grads.push(softmax_grad.squeeze(0));
+        }
+        let input_grad = Tensor::stack(&grads);
+        Self::Grad { input: input_grad }
     }
 }
