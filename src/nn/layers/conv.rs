@@ -36,6 +36,30 @@ impl Conv2D {
         }
     }
 
+    pub fn random_init<G>(
+        c_in: usize,
+        c_out: usize,
+        kernel_size: (usize, usize),
+        strides: (usize, usize),
+        dilations: (usize, usize),
+        random_generator: &mut G,
+    ) -> Self
+    where
+        G: FnMut() -> f32,
+    {
+        Self {
+            input_shape: None,
+            input: None,
+            weights: Tensor::random(
+                &[c_out, kernel_size.0, kernel_size.1, c_in],
+                random_generator,
+            ),
+            biases: Tensor::vector_filled(4, 1.0),
+            strides,
+            dilations,
+        }
+    }
+
     pub fn with_shape(
         image_shape: &[usize; 4],
         kernel_shape: &[usize; 4],
@@ -66,17 +90,6 @@ impl Conv2D {
             dilations,
         }
     }
-
-    //pub fn random_init<G>(in_features: usize, out_features: usize, random_generator: &mut G) -> Self
-    //where
-    //    G: FnMut() -> f32,
-    //{
-    //    Self {
-    //        input: Tensor::new(&[1, in_features]),
-    //        weights: Tensor::matrix_random(out_features, in_features, random_generator),
-    //        biases: Tensor::vector_random(out_features, random_generator),
-    //    }
-    //}
 }
 
 impl Forward<4, 4> for Conv2D {
@@ -137,7 +150,7 @@ impl Backward<4, 4> for Conv2D {
             PaddingType::Zero,
         );
 
-        println!("input grad {:?}", input_grad.shape());
+        //println!("input grad {:?}", input_grad.shape());
         //We also have to do the same thing to the next grad to get the correct weight shape
         let pad_next_grad = next_grad.transpose(&[3, 1, 2, 0]).pad2d(
             (
@@ -147,7 +160,7 @@ impl Backward<4, 4> for Conv2D {
             PaddingType::Zero,
         );
 
-        println!("pad next grad shape {:?}", pad_next_grad.shape());
+        //println!("pad next grad shape {:?}", pad_next_grad.shape());
         let weight_grad = input
             .transpose(&[3, 1, 2, 0])
             .conv2d(&pad_next_grad, self.dilations)
