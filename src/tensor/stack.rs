@@ -1,22 +1,26 @@
 use super::Tensor;
 
-impl Tensor<3> {
+impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
     /// Unfinised stacking
-    pub fn stack(tensors: &[Tensor<3>]) -> Tensor<4> {
+    pub fn stack<const OUTPUT_DIMENSIONS: usize>(
+        tensors: &[Tensor<NO_DIMENSIONS>],
+    ) -> Tensor<OUTPUT_DIMENSIONS> {
         let no_tensors = tensors.iter().len();
         let shape = tensors[0].shape();
+        let no_elements = tensors[0].no_elements();
 
-        let mut new_data = Vec::with_capacity(no_tensors * tensors[0].no_elements());
+        let mut new_data = Vec::with_capacity(no_tensors * no_elements);
+        let mut new_shape = [0; OUTPUT_DIMENSIONS];
+        new_shape[0] = no_tensors;
 
-        let new_shape = [no_tensors, shape[0], shape[1], shape[2]];
+        for (i, s) in shape.iter().enumerate() {
+            new_shape[i + 1] = *s;
+        }
 
         for tensor in tensors {
-            for i in 0..shape[0] {
-                for j in 0..shape[1] {
-                    for k in 0..shape[2] {
-                        new_data.push(tensor[(i, j, k)]);
-                    }
-                }
+            for flat_index in 0..no_elements {
+                let multi_dim_index = Tensor::flat_to_nd_index(flat_index, shape);
+                new_data.push(tensor[&multi_dim_index]);
             }
         }
         Tensor::with_data(
