@@ -268,6 +268,34 @@ impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
         Self::with_data(shape, &strides, 0, Arc::from(new_data))
     }
 
+    pub fn value_div(value: f32, tensor: &Self) -> Self {
+        let shape = tensor.shape();
+        let strides = Self::get_strides(shape);
+        let no_elements = shape.iter().product();
+
+        let mut new_data = vec![0f32; no_elements];
+
+        let mut multi_dim_index = [0; NO_DIMENSIONS];
+        let mut remaining: usize;
+        for flat_index in 0..no_elements {
+            remaining = flat_index;
+            for (d, dim) in strides.iter().enumerate() {
+                multi_dim_index[d] = remaining / dim;
+                remaining %= dim;
+            }
+            assert!(
+                remaining == 0,
+                "Failed mapping flat_index {} to multidimentional index {:?}",
+                flat_index,
+                shape
+            );
+
+            new_data[flat_index] = value / tensor[&multi_dim_index];
+        }
+
+        Self::with_data(shape, &strides, 0, Arc::from(new_data))
+    }
+
     pub fn powf(&self, value: f32) -> Self {
         let shape = self.shape();
         let strides = Self::get_strides(shape);
@@ -428,6 +456,23 @@ impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
         }
         s
     }
+
+    pub fn sum_dim(&self, dim: usize) -> Self {
+        let shape = self.shape();
+        let mut new_shape = *shape;
+        new_shape[dim] = 1;
+        let strides = Self::get_strides(&new_shape);
+
+        let mut data = vec![0.0; new_shape.iter().product()];
+        for flat_index in 0..self.no_elements() {
+            let multi_dim_index = Self::flat_to_nd_index(flat_index, shape);
+            let mut sum_index = multi_dim_index;
+            sum_index[dim] = 1;
+            let flat_index = sum_index.iter().zip(strides).fold(0, |a, (i, s)| a + i * s);
+            data[flat_index] += self[&multi_dim_index]
+        }
+        Self::with_data(&new_shape, &strides, 0, data.into())
+    }
 }
 
 impl Tensor<2> {
@@ -555,6 +600,17 @@ impl Tensor<1> {
 
         Tensor::vector_filled(1, dot_value)
     }
+
+    pub fn diag(&self) -> Tensor<2> {
+        let no_elements = self.no_elements();
+        let mut data = vec![0.0; no_elements * no_elements];
+
+        for i in 0..no_elements {
+            data[i * no_elements + i] = self[i];
+        }
+
+        Tensor::matrix_with_data(no_elements, no_elements, &[no_elements, 1], 0, data.into())
+    }
 }
 
 impl Tensor<2> {
@@ -615,7 +671,7 @@ impl Tensor<2> {
     pub fn sum_col(&self) -> Tensor<1> {
         let &[rows, cols] = self.shape();
 
-        let mut new_data = vec![0f32; cols];
+        let mut new_data = vec![0f32; rows];
         for i in 0..rows {
             for j in 0..cols {
                 new_data[i] += self[(i, j)];
@@ -623,6 +679,39 @@ impl Tensor<2> {
         }
 
         Tensor::vector_with_data(rows, 1, 0, Arc::from(new_data))
+    }
+}
+
+impl Tensor<3> {
+    pub fn batch_matmul(&self, b_matrix: &Tensor<2>) -> Tensor<3> {
+        let a_matrix = self;
+        let &[batch, a_rows, a_cols] = a_matrix.shape();
+        let &[b_rows, b_cols] = b_matrix.shape();
+
+        assert!(
+            a_cols == b_rows,
+            "Cannot dot a_cols {} must equals b_rows {}",
+            a_cols,
+            b_rows
+        );
+
+        let output_shape = [batch, a_rows, b_cols];
+        let strides = Tensor::get_strides(&output_shape);
+        let inner_dimension = a_cols;
+
+        let mut data = vec![0f32; output_shape.iter().product()];
+
+        for b in 0..batch {
+            for i in 0..a_rows {
+                for j in 0..b_cols {
+                    for k in 0..inner_dimension {
+                        data[b * strides[0] + i * strides[1] + j] +=
+                            a_matrix[(b, i, k)] * b_matrix[(k, j)]
+                    }
+                }
+            }
+        }
+        Tensor::with_data(&output_shape, &strides, 0, data.into())
     }
 }
 
@@ -678,7 +767,7 @@ impl<const NO_DIMENSIONS: usize> ops::Div<f32> for &Tensor<NO_DIMENSIONS> {
 impl<const NO_DIMENSIONS: usize> ops::Div<&Tensor<NO_DIMENSIONS>> for f32 {
     type Output = Tensor<NO_DIMENSIONS>;
     fn div(self, tensor: &Tensor<NO_DIMENSIONS>) -> Self::Output {
-        Tensor::scale(tensor, 1f32 / self)
+        Tensor::value_div(self, tensor)
     }
 }
 
