@@ -1,8 +1,4 @@
-use ml_rs::examples::{
-    //logic_gate,
-    dynamic_simple_cnn::train,
-    //simple_cnn::train
-};
+use ml_rs::examples::simple_image_classification::train;
 
 fn main() {
     //let mut random_generator = PCG::new(32, 6);
