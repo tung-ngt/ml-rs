@@ -1,4 +1,4 @@
-use ml_rs::examples::simple_image_classification::train;
+use ml_rs::examples::{simple_image_classification::train, test_read_csv::test_read_csv};
 
 fn main() {
     //let mut random_generator = PCG::new(32, 6);
@@ -11,5 +11,7 @@ fn main() {
     //    Some(&mut random_fn),
     //);
 
-    train();
+    //train();
+
+    test_read_csv();
 }

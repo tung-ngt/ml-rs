@@ -5,6 +5,7 @@ use std::{
 
 use crate::tensor::Tensor;
 
+#[derive(Debug)]
 pub enum ReadCSVError {
     IOError(io::Error),
     ParseFloatError {
