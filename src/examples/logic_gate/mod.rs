@@ -6,7 +6,7 @@ use sigmoid::SigmoidModel;
 
 use crate::{
     nn::{
-        loss::mse::{reduction, MSE},
+        loss::{mse::MSE, reduction},
         optimizer::sgd::SGD,
         Backward, Forward, Loss, Update,
     },

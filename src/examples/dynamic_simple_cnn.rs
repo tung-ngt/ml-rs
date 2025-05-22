@@ -1,7 +1,7 @@
 use crate::{
     nn::{
         layers::{conv::Conv2D, flatten::Flatten, stack::Stack},
-        loss::mse::{reduction, MSE},
+        loss::{mse::MSE, reduction},
         optimizer::{sgd::SGD, DynOptimizer},
         DynLayer, Loss,
     },

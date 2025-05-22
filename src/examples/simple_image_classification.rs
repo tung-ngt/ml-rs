@@ -1,5 +1,3 @@
-use std::default;
-
 use crate::{
     nn::{
         layers::{
@@ -11,10 +9,7 @@ use crate::{
             relu::ReLU,
             softmax::Softmax,
         },
-        loss::{
-            cross_entropy::CrossEntropy,
-            mse::{reduction, MSE},
-        },
+        loss::{cross_entropy::CrossEntropy, reduction},
         optimizer::sgd::SGD,
         Backward, Forward, InputGrad, Loss, Optimizer, Update,
     },
@@ -188,7 +183,7 @@ pub fn train() {
 
     let mut model = Model::new();
     //let mut loss_fn = MSE::<reduction::Mean>::default();
-    let mut loss_fn = CrossEntropy;
+    let mut loss_fn = CrossEntropy::<reduction::Mean>::default();
     let mut optimizer = SGD::new(lr);
 
     for e in 0..epochs {

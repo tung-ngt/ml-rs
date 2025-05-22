@@ -4,7 +4,7 @@ use crate::{
             conv::{Conv2D, Conv2DGrad},
             flatten::Flatten,
         },
-        loss::mse::{reduction, MSE},
+        loss::{mse::MSE, reduction},
         optimizer::sgd::SGD,
         Backward, Forward, InputGrad, Loss, Optimizer, Update,
     },
