@@ -1,5 +1,4 @@
 use super::Tensor;
-use core::f32;
 use std::{array, ops, sync::Arc};
 
 impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
@@ -696,6 +695,90 @@ impl Tensor<2> {
         }
 
         Tensor::vector_with_data(rows, 1, 0, Arc::from(new_data))
+    }
+
+    pub fn max_col(&self) -> (Tensor<1>, Tensor<1>) {
+        let &[rows, cols] = self.shape();
+
+        let mut max_data = vec![f32::NEG_INFINITY; rows];
+        let mut index_data = vec![0.0; rows];
+        for i in 0..rows {
+            for j in 0..cols {
+                let value = self[(i, j)];
+                if value >= max_data[i] {
+                    max_data[i] = value;
+                    index_data[i] = j as f32;
+                }
+            }
+        }
+
+        (
+            Tensor::vector_with_data(rows, 1, 0, max_data.into()),
+            Tensor::vector_with_data(rows, 1, 0, index_data.into()),
+        )
+    }
+
+    pub fn max_row(&self) -> (Tensor<1>, Tensor<1>) {
+        let &[rows, cols] = self.shape();
+
+        let mut max_data = vec![f32::NEG_INFINITY; cols];
+        let mut index_data = vec![0.0; cols];
+        for j in 0..cols {
+            for i in 0..rows {
+                let value = self[(i, j)];
+                if value >= max_data[j] {
+                    max_data[j] = value;
+                    index_data[j] = i as f32;
+                }
+            }
+        }
+
+        (
+            Tensor::vector_with_data(cols, 1, 0, max_data.into()),
+            Tensor::vector_with_data(cols, 1, 0, index_data.into()),
+        )
+    }
+
+    pub fn min_col(&self) -> (Tensor<1>, Tensor<1>) {
+        let &[rows, cols] = self.shape();
+
+        let mut max_data = vec![f32::INFINITY; rows];
+        let mut index_data = vec![0.0; rows];
+        for i in 0..rows {
+            for j in 0..cols {
+                let value = self[(i, j)];
+                if value <= max_data[i] {
+                    max_data[i] = value;
+                    index_data[i] = j as f32;
+                }
+            }
+        }
+
+        (
+            Tensor::vector_with_data(rows, 1, 0, max_data.into()),
+            Tensor::vector_with_data(rows, 1, 0, index_data.into()),
+        )
+    }
+
+    pub fn min_row(&self) -> (Tensor<1>, Tensor<1>) {
+        let &[rows, cols] = self.shape();
+
+        let mut max_data = vec![f32::INFINITY; cols];
+        let mut index_data = vec![0.0; cols];
+        for j in 0..cols {
+            for i in 0..rows {
+                let value = self[(i, j)];
+                if value <= max_data[j] {
+                    max_data[j] = value;
+                    index_data[j] = i as f32;
+                }
+            }
+        }
+
+        (
+            Tensor::vector_with_data(cols, 1, 0, max_data.into()),
+            Tensor::vector_with_data(cols, 1, 0, index_data.into()),
+        )
     }
 }
 
