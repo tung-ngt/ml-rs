@@ -457,6 +457,23 @@ impl<const NO_DIMENSIONS: usize> Tensor<NO_DIMENSIONS> {
         s
     }
 
+    pub fn mean(&self) -> f32 {
+        self.sum() / self.no_elements() as f32
+    }
+
+    pub fn std(&self) -> f32 {
+        let no_elements = self.no_elements() as f32;
+        let sum = self.sum();
+        let mean = sum / no_elements;
+
+        let diff = self - mean;
+        let square_diff = diff.powi(2);
+        let sum_square_diff = square_diff.sum();
+        let mean_square_diff = sum_square_diff / (no_elements + 1.0);
+
+        mean_square_diff.sqrt()
+    }
+
     pub fn sum_dim(&self, dim: usize) -> Self {
         let shape = self.shape();
         let mut new_shape = *shape;
