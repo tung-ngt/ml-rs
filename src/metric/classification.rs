@@ -41,7 +41,7 @@ impl ClassificationReport {
         let mut data = vec![0.0; no_classes * no_classes];
         for i in 0..target.no_elements() {
             let actual = target[i] as usize;
-            let predicted = target[i] as usize;
+            let predicted = prediction[i] as usize;
             data[actual * no_classes + predicted] += 1.0;
         }
 
@@ -60,7 +60,10 @@ impl ClassificationReport {
     }
 
     pub fn compute_f1(precision: &Tensor<1>, recall: &Tensor<1>) -> Tensor<1> {
-        &precision.mul_elem(recall).scale(2.0) - &(precision - recall)
+        precision
+            .mul_elem(recall)
+            .scale(2.0)
+            .div_elem(&(precision + recall))
     }
 
     pub fn compute_accuracy(confusion_matrix: &Tensor<2>) -> f32 {
