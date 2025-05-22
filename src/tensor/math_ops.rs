@@ -618,7 +618,7 @@ impl Tensor<1> {
         Tensor::vector_filled(1, dot_value)
     }
 
-    pub fn diag(&self) -> Tensor<2> {
+    pub fn to_diag(&self) -> Tensor<2> {
         let no_elements = self.no_elements();
         let mut data = vec![0.0; no_elements * no_elements];
 

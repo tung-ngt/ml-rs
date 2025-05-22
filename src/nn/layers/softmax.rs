@@ -36,7 +36,7 @@ impl Backward<2, 2> for Softmax {
         for b in 0..batch {
             let output = input_softmax.row(b);
             let output_t = output.t();
-            let diag = output.squeeze(0).diag();
+            let diag = output.squeeze(0).to_diag();
             let softmax_jacobian = &diag - &(&output_t * &output);
             let batch_next_grad = next_grad.row(b);
             let softmax_grad = &batch_next_grad * &softmax_jacobian;
