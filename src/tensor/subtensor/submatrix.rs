@@ -33,6 +33,18 @@ impl Tensor<2> {
         );
         Tensor::matrix_with_data(rows, 1, self.strides(), self.offset() + index, self.data())
     }
+
+    pub fn diag(&self) -> Tensor<1> {
+        let &[rows, cols] = self.shape();
+        assert!(
+            rows == cols,
+            "Should be square matrix to get diagonal axis. Got matrix {}x{}",
+            rows,
+            cols
+        );
+        let new_stride = self.strides()[0] + 1;
+        Tensor::vector_with_data(rows, new_stride, self.offset(), self.data())
+    }
 }
 
 impl Tensor<2> {
