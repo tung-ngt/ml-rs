@@ -1,10 +1,11 @@
 use std::marker;
 
+use super::reduction;
 use crate::nn::Loss;
 use crate::tensor::Tensor;
 
 #[derive(Default)]
-pub struct MSE<T: reduction::Reduction> {
+pub struct MSE<T> {
     _marker: marker::PhantomData<T>,
 }
 
@@ -93,22 +94,26 @@ impl<const OUTPUT_DIMENSIONS: usize> Loss<OUTPUT_DIMENSIONS> for MSE<reduction::
     }
 }
 
-pub mod reduction {
-    pub trait Reduction {}
-    #[derive(Default)]
-    pub struct Mean;
-    #[derive(Default)]
-    pub struct Sum;
-    #[derive(Default)]
-    pub struct NoReduction;
-    #[derive(Default)]
-    pub struct MeanBatch;
-    #[derive(Default)]
-    pub struct MeanFeature;
+impl MSE<reduction::MeanBatch> {
+    pub fn loss<const OUTPUT_DIMENSIONS: usize>(
+        &mut self,
+        prediction: Tensor<OUTPUT_DIMENSIONS>,
+        target: Tensor<OUTPUT_DIMENSIONS>,
+    ) -> Tensor<OUTPUT_DIMENSIONS> {
+        let loss_tensor = Self::internal_loss(prediction, target);
+        let batch = loss_tensor.shape()[0];
+        &loss_tensor.sum_dim(0) / (batch as f32)
+    }
+}
 
-    impl Reduction for Mean {}
-    impl Reduction for Sum {}
-    impl Reduction for NoReduction {}
-    impl Reduction for MeanBatch {}
-    impl Reduction for MeanFeature {}
+impl<const OUTPUT_DIMENSIONS: usize> Loss<OUTPUT_DIMENSIONS> for MSE<reduction::MeanBatch> {
+    fn loss_grad(
+        &mut self,
+        prediction: Tensor<OUTPUT_DIMENSIONS>,
+        target: Tensor<OUTPUT_DIMENSIONS>,
+    ) -> Tensor<OUTPUT_DIMENSIONS> {
+        let grad = Self::internal_loss_grad(prediction, target);
+        let batch = grad.shape()[0];
+        &grad / (batch as f32)
+    }
 }
