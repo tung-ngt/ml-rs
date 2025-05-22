@@ -1,13 +1,13 @@
 use crate::tensor::Tensor;
 
-pub fn one_hot_encoding(labels: Tensor<2>, no_classes: usize) -> Tensor<2> {
-    let &[batch, _] = labels.shape();
+pub fn one_hot_encoding(labels: Tensor<1>, no_classes: usize) -> Tensor<2> {
+    let batch = labels.no_elements();
     let mut data = vec![0.0; batch * no_classes];
     let shape = [batch, no_classes];
     let strides = Tensor::get_strides(&shape);
 
     for b in 0..batch {
-        let label = labels[(b, 0)] as usize;
+        let label = labels[b] as usize;
         data[b * strides[0] + label] = 1.0;
     }
 

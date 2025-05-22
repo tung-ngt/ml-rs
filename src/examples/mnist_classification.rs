@@ -35,7 +35,6 @@ struct Model {
     lin1: Linear,
     relu3: ReLU<2>,
     lin2: Linear,
-    //relu4: ReLU<2>,
     softmax: Softmax,
 }
 
@@ -63,7 +62,6 @@ impl Model {
             lin1: Linear::random_init(64, 32, &mut lin1_random),
             relu3: ReLU::default(),
             lin2: Linear::random_init(32, 10, &mut lin2_random),
-            //relu4: ReLU::default(),
             softmax: Softmax::default(),
         }
     }
@@ -79,15 +77,10 @@ impl Forward<4, 2> for Model {
         let output = self.relu2.forward(&output);
         let output = self.max_pool.forward(&output);
         let output = self.flatten.forward(&output);
-        //println!("{}", output);
         let output = self.lin1.forward(&output);
         let output = self.relu3.forward(&output);
         let output = self.lin2.forward(&output);
-        //println!("lin {}", output);
-        //let output = self.relu4.forward(&output);
-        let output = self.softmax.forward(&output);
-        //println!("pred {}", output);
-        output
+        self.softmax.forward(&output)
     }
 }
 
@@ -108,8 +101,6 @@ impl InputGrad<4> for ModelGrad {
 impl Backward<4, 2> for Model {
     type Grad = ModelGrad;
     fn backward(&self, next_grad: &Tensor<2>) -> Self::Grad {
-        //let relu4_grad = self.relu4.backward(next_grad);
-        //let lin2_grad = self.lin2.backward(&relu4_grad.input());
         let softmax_grad = self.softmax.backward(next_grad);
         let lin2_grad = self.lin2.backward(&softmax_grad.input());
         let relu3_grad = self.relu3.backward(&lin2_grad.input());
@@ -142,14 +133,14 @@ impl Update for Model {
     }
 }
 
-pub fn get_data(path: &str) -> (Tensor<4>, Tensor<2>) {
+pub fn get_data(path: &str) -> (Tensor<4>, Tensor<1>) {
     assert!(Path::new(path).is_file(), "File {} does not exist", path);
 
     let data = read_csv(path, None).expect("should not be error when read csv");
     let &[no_data, _] = data.shape();
     let x = data.submatrix(.., 0..64);
     let x = x.reshape(&[no_data, 8, 8, 1]);
-    let y = data.submatrix(.., 64..);
+    let y = data.col(65).squeeze(0);
     (x, y)
 }
 
@@ -158,7 +149,7 @@ pub fn train() {
     let label_one_hot = one_hot_encoding(label, 10);
     let data = &(&data - data.mean()) / data.std();
 
-    let lr = 0.002;
+    let lr = 0.02;
     let epochs = 20;
     let batch_size = 20;
 
@@ -192,14 +183,12 @@ pub fn train() {
         }
         avg_loss /= no_batch as f32;
         println!(
-            "epoch {}: avg loss {}###########################",
+            "epoch {}: avg loss {} ---------------------------------------------",
             e, avg_loss
         );
     }
 
     let (test_data, test_label) = get_data("data/optdigits.tes");
     let test_data = &(&test_data - test_data.mean()) / data.std();
-    let predict = model.forward(&test_data.subtensor(&[0..10, 0..8, 0..8, 0..1]));
-    println!("{}", predict);
-    println!("{}", test_label.submatrix(0..10, ..));
+    let predict = model.forward(&test_data);
 }
