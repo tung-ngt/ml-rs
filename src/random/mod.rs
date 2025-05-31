@@ -17,4 +17,17 @@ pub trait RandomGenerator {
         let range = end - start;
         self.next_f32() * range + start
     }
+
+    fn next_shuffle(&mut self, no_elements: usize) -> Vec<usize> {
+        let mut elements: Vec<_> = (0..no_elements).collect();
+        let mut shuffled = Vec::with_capacity(no_elements);
+
+        while !elements.is_empty() {
+            let no_elements_left = elements.len();
+            let i = self.next_u32() as usize % no_elements_left;
+            shuffled.push(elements.swap_remove(i));
+        }
+
+        shuffled
+    }
 }
