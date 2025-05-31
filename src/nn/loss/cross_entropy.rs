@@ -20,14 +20,14 @@ impl<T: reduction::Reduction> CrossEntropy<T> {
             prediction.shape(),
             target.shape()
         );
-        prediction.apply(|x| -x.ln()).mul_elem(&target)
+        prediction.apply(|x| -x.max(1e-7).ln()).mul_elem(&target)
     }
 
     fn internal_loss_grad<const OUTPUT_DIMENSIONS: usize>(
         prediction: Tensor<OUTPUT_DIMENSIONS>,
         target: Tensor<OUTPUT_DIMENSIONS>,
     ) -> Tensor<OUTPUT_DIMENSIONS> {
-        (-1.0 / &prediction).mul_elem(&target)
+        (-1.0 / &prediction.apply(|x| x.max(1e-7))).mul_elem(&target)
     }
 }
 
