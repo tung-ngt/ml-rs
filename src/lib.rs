@@ -1,4 +1,3 @@
-pub mod _matrix;
 pub mod data;
 pub mod examples;
 pub mod metric;
