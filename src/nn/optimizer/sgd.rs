@@ -10,7 +10,7 @@ impl SGD {
     pub fn new(learning_rate: f32) -> Self {
         Self {
             learning_rate,
-            l2_penalty: 0.00001,
+            l2_penalty: 1e-7,
         }
     }
 
