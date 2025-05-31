@@ -48,9 +48,7 @@ impl Forward<4, 4> for MaxPool2D {
     fn forward(&mut self, input: &Tensor<4>) -> Tensor<4> {
         let (x, i) = input.max_pool2d(self.kernel_size, self.strides, self.dilations);
         self.indicies = Some(i);
-        if self.input_shape.is_none() {
-            self.input_shape = Some(*input.shape());
-        }
+        self.input_shape = Some(*input.shape());
         x
     }
 }
