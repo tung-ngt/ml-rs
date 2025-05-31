@@ -6,6 +6,7 @@ pub mod pad;
 pub mod pooling;
 pub mod reshape;
 pub mod reverse;
+pub mod shuffle;
 pub mod stack;
 pub mod subtensor;
 pub mod upsample;
