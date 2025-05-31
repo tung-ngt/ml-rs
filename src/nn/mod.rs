@@ -34,11 +34,6 @@ pub trait Optimizer {
 }
 
 pub trait Loss<const OUTPUT_DIMENSIONS: usize> {
-    //fn loss<const OUTPUT_DIMENSIONS: usize>(
-    //    &mut self,
-    //    prediction: Tensor<OUTPUT_DIMENSIONS>,
-    //    target: Tensor<OUTPUT_DIMENSIONS>,
-    //) -> f32;
     fn loss_grad(
         &mut self,
         prediction: Tensor<OUTPUT_DIMENSIONS>,
