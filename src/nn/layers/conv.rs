@@ -60,6 +60,26 @@ impl Conv2D {
         }
     }
 
+    pub fn random_init_with_shape<G>(
+        image_shape: &[usize; 4],
+        kernel_shape: &[usize; 4],
+        strides: (usize, usize),
+        dilations: (usize, usize),
+        random_generator: &mut G,
+    ) -> Self
+    where
+        G: FnMut() -> f32,
+    {
+        Self {
+            input_shape: Some(*image_shape),
+            input: None,
+            weights: Tensor::random(kernel_shape, random_generator),
+            biases: Tensor::vector_filled(4, 1.0),
+            strides,
+            dilations,
+        }
+    }
+
     pub fn with_shape(
         image_shape: &[usize; 4],
         kernel_shape: &[usize; 4],
@@ -184,11 +204,12 @@ impl Update for Conv2D {
 
 impl DynLayer for Conv2D {
     fn forward(&mut self, input: &Tensor<2>) -> Tensor<2> {
-        let input = input.reshape(
-            self.input_shape
-                .as_ref()
-                .expect("must give image shape for dyn conv forward"),
-        );
+        let input_shape = self
+            .input_shape
+            .as_ref()
+            .expect("must give image shape for dyn conv forward");
+
+        let input = input.reshape(input_shape);
         Forward::forward(self, &input).flatten(Some(1), None)
     }
 

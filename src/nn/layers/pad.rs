@@ -1,19 +1,38 @@
 use crate::{
-    nn::{Backward, Forward, InputGrad},
+    nn::{optimizer::DynOptimizer, Backward, DynLayer, Forward, InputGrad},
     tensor::{
-        pad::{PaddingSize, PaddingType},
+        pad::{pad2d_output_size, PaddingSize, PaddingType},
         Tensor,
     },
 };
 
+use super::DynGrad;
+
 pub struct Pad2D {
+    input_shape: Option<[usize; 4]>,
     pad_size: (PaddingSize, PaddingSize),
     pad_type: PaddingType,
 }
 
 impl Pad2D {
     pub fn new(pad_size: (PaddingSize, PaddingSize), pad_type: PaddingType) -> Self {
-        Self { pad_size, pad_type }
+        Self {
+            input_shape: None,
+            pad_size,
+            pad_type,
+        }
+    }
+
+    pub fn with_shape(
+        input_shape: &[usize; 4],
+        pad_size: (PaddingSize, PaddingSize),
+        pad_type: PaddingType,
+    ) -> Self {
+        Self {
+            input_shape: Some(*input_shape),
+            pad_size,
+            pad_type,
+        }
     }
 }
 
@@ -50,6 +69,29 @@ impl Backward<4, 4> for Pad2D {
             input: next_grad.subtensor(&[0..b, top..h - bottom, left..w - right, 0..c]),
         }
     }
+}
+
+impl DynLayer for Pad2D {
+    fn forward(&mut self, input: &Tensor<2>) -> Tensor<2> {
+        let input = input.reshape(
+            self.input_shape
+                .as_ref()
+                .expect("must give image shape for dyn conv forward"),
+        );
+        Forward::forward(self, &input).flatten(Some(1), None)
+    }
+
+    fn backward(&self, next_grad: &Tensor<2>) -> DynGrad {
+        let image_shape = self
+            .input_shape
+            .as_ref()
+            .expect("must give image shape for dyn conv backward");
+        let output_shape = pad2d_output_size(image_shape, self.pad_size.clone());
+        let next_grad = next_grad.reshape(&output_shape);
+        DynGrad::Pad2D(Backward::backward(self, &next_grad))
+    }
+
+    fn update(&mut self, _optimizer: &mut DynOptimizer, _grad: &DynGrad) {}
 }
 
 #[cfg(test)]

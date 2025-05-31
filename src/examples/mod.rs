@@ -1,3 +1,4 @@
+pub mod dynamic_mnist_classification;
 pub mod dynamic_simple_cnn;
 pub mod logic_gate;
 pub mod mnist_classification;

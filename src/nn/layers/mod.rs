@@ -19,6 +19,7 @@ use pad::Pad2DGrad;
 use prelu::PReLUGrad;
 use relu::ReLUGrad;
 use sigmoid::SigmoidGrad;
+use softmax::SoftmaxGrad;
 use stack::StackGrad;
 
 use crate::tensor::Tensor;
@@ -36,6 +37,7 @@ pub enum DynGrad {
     Stack(StackGrad),
     MaxPool2D(MaxPool2DGrad),
     Pad2D(Pad2DGrad),
+    Softmax(SoftmaxGrad),
 }
 
 impl DynGrad {
@@ -51,6 +53,7 @@ impl DynGrad {
             Self::ReLU(g) => g.input().clone(),
             Self::Sigmoid(g) => g.input().clone(),
             Self::Stack(g) => g.input(),
+            Self::Softmax(g) => g.input(),
         }
     }
 }

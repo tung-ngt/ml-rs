@@ -42,6 +42,24 @@ pub fn pad2d_full_size(kernel_size: (usize, usize)) -> (PaddingSize, PaddingSize
     (height_padding, width_padding)
 }
 
+pub fn pad2d_output_size(
+    input_shape: &[usize; 4],
+    padding_sizes: (PaddingSize, PaddingSize),
+) -> [usize; 4] {
+    let &[b, h, w, c] = input_shape;
+    let (top, bottom) = match padding_sizes.0 {
+        PaddingSize::Same(p) => (p, p),
+        PaddingSize::Diff(t, b) => (t, b),
+    };
+
+    let (left, right) = match padding_sizes.1 {
+        PaddingSize::Same(p) => (p, p),
+        PaddingSize::Diff(l, r) => (l, r),
+    };
+
+    [b, h + top + bottom, w + left + right, c]
+}
+
 impl Tensor<4> {
     // Add padding to the matrix
     // expect padding_sizes (height_padding, width_padding)
@@ -58,17 +76,18 @@ impl Tensor<4> {
         };
 
         let &[b, h, w, c] = self.shape();
-        let (top, bottom) = match padding_sizes.0 {
+        let (top, _) = match padding_sizes.0 {
             PaddingSize::Same(p) => (p, p),
             PaddingSize::Diff(t, b) => (t, b),
         };
 
-        let (left, right) = match padding_sizes.1 {
+        let (left, _) = match padding_sizes.1 {
             PaddingSize::Same(p) => (p, p),
             PaddingSize::Diff(l, r) => (l, r),
         };
 
-        let new_shape = [b, h + top + bottom, w + left + right, c];
+        let new_shape = pad2d_output_size(self.shape(), padding_sizes);
+
         let mut data = vec![value; new_shape.iter().product()];
 
         for i in 0..b {

@@ -1,5 +1,11 @@
-use ml_rs::examples::mnist_classification::train;
-
+use ml_rs::examples::{
+    //mnist_classification,
+    dynamic_mnist_classification,
+};
 fn main() {
-    train();
+    // compile model
+    //mnist_classification::train();
+
+    // dynamic model
+    dynamic_mnist_classification::train();
 }

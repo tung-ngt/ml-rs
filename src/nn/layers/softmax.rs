@@ -1,5 +1,8 @@
-use crate::nn::{Backward, Forward, InputGrad};
+use crate::nn::optimizer::DynOptimizer;
+use crate::nn::{Backward, DynLayer, Forward, InputGrad};
 use crate::tensor::Tensor;
+
+use super::DynGrad;
 
 #[derive(Default)]
 pub struct Softmax {
@@ -45,4 +48,16 @@ impl Backward<2, 2> for Softmax {
         let input_grad = Tensor::stack(&grads);
         Self::Grad { input: input_grad }
     }
+}
+
+impl DynLayer for Softmax {
+    fn forward(&mut self, input: &Tensor<2>) -> Tensor<2> {
+        Forward::forward(self, input)
+    }
+
+    fn backward(&self, next_grad: &Tensor<2>) -> DynGrad {
+        DynGrad::Softmax(Backward::backward(self, next_grad))
+    }
+
+    fn update(&mut self, _optimizer: &mut DynOptimizer, _grad: &DynGrad) {}
 }
